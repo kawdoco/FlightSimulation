@@ -2,10 +2,13 @@ package com.flightsimulation.service;
 
 import com.flightsimulation.entity.Aircraft;
 import com.flightsimulation.entity.Flight;
+import com.flightsimulation.exception.DuplicateResourceException;
+import com.flightsimulation.exception.ResourceNotFoundException;
 import com.flightsimulation.repository.AircraftRepository;
 import com.flightsimulation.repository.FlightRepository;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,37 +34,53 @@ public class FlightService {
     public Flight getFlightById(Long id) {
         return flightRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Flight not found with id: " + id
                         )
                 );
     }
 
-    public Flight createFlight(Flight flight, Long aircraftId) {
+    private Aircraft getAircraftById(Long aircraftId) {
+        return aircraftRepository.findById(aircraftId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Aircraft not found with id: " + aircraftId
+                        )
+                );
+    }
+
+    private void validateAircraftAvailability(Aircraft aircraft) {
+
+        if (!"AVAILABLE".equalsIgnoreCase(aircraft.getStatus())) {
+
+            throw new IllegalStateException(
+                    "Aircraft "
+                            + aircraft.getRegistrationNumber()
+                            + " is unavailable. Current status: "
+                            + aircraft.getStatus()
+            );
+        }
+    }
+
+    @Transactional
+    public Flight createFlight(
+            Flight flight,
+            Long aircraftId
+    ) {
 
         if (flightRepository.existsByFlightNumber(
                 flight.getFlightNumber()
         )) {
-            throw new RuntimeException(
+
+            throw new DuplicateResourceException(
                     "Flight number already exists"
             );
         }
 
-        Aircraft aircraft = aircraftRepository
-                .findById(aircraftId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Aircraft not found with id: " + aircraftId
-                        )
-                );
+        Aircraft aircraft = getAircraftById(aircraftId);
 
-        if (!"AVAILABLE".equalsIgnoreCase(
-                aircraft.getStatus()
-        )) {
-            throw new RuntimeException(
-                    "Selected aircraft is not available"
-            );
-        }
+        // Only AVAILABLE aircraft can be assigned
+        validateAircraftAvailability(aircraft);
 
         flight.setAircraft(aircraft);
         flight.setStatus("SCHEDULED");
@@ -69,6 +88,7 @@ public class FlightService {
         return flightRepository.save(flight);
     }
 
+    @Transactional
     public Flight updateFlight(
             Long id,
             Flight updatedFlight,
@@ -77,13 +97,38 @@ public class FlightService {
 
         Flight existing = getFlightById(id);
 
-        Aircraft aircraft = aircraftRepository
-                .findById(aircraftId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Aircraft not found"
-                        )
-                );
+        // Active flights must not be edited
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                existing.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Cannot update a flight that is currently in progress"
+            );
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(
+                existing.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Cannot update a completed flight"
+            );
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(
+                existing.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Cannot update a cancelled flight"
+            );
+        }
+
+        Aircraft aircraft = getAircraftById(aircraftId);
+
+        // Prevent assigning unavailable aircraft
+        validateAircraftAvailability(aircraft);
 
         existing.setFlightNumber(
                 updatedFlight.getFlightNumber()
@@ -106,19 +151,46 @@ public class FlightService {
         return flightRepository.save(existing);
     }
 
+    @Transactional
     public Flight startFlight(Long id) {
 
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equals(flight.getStatus())) {
-            throw new RuntimeException(
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
                     "Flight is already in progress"
+            );
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Completed flight cannot be started again"
+            );
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Cancelled flight cannot be started"
             );
         }
 
         Aircraft aircraft = flight.getAircraft();
 
+        // Check availability again before starting
+        validateAircraftAvailability(aircraft);
+
+        // Aircraft is now being used by the flight
         aircraft.setStatus("IN_FLIGHT");
+
         aircraftRepository.save(aircraft);
 
         flight.setStatus("IN_PROGRESS");
@@ -127,13 +199,26 @@ public class FlightService {
         return flightRepository.save(flight);
     }
 
+    @Transactional
     public Flight completeFlight(Long id) {
 
         Flight flight = getFlightById(id);
 
+        if (!"IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Only an in-progress flight can be completed"
+            );
+        }
+
         Aircraft aircraft = flight.getAircraft();
 
+        // Maintenance integration will later decide whether
+        // this should remain AVAILABLE or move to MAINTENANCE.
         aircraft.setStatus("AVAILABLE");
+
         aircraftRepository.save(aircraft);
 
         flight.setStatus("COMPLETED");
@@ -142,13 +227,35 @@ public class FlightService {
         return flightRepository.save(flight);
     }
 
+    @Transactional
     public Flight cancelFlight(Long id) {
 
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equals(flight.getStatus())) {
-            throw new RuntimeException(
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
                     "Cannot cancel an active flight"
+            );
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Cannot cancel a completed flight"
+            );
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
+                    "Flight is already cancelled"
             );
         }
 
@@ -157,12 +264,16 @@ public class FlightService {
         return flightRepository.save(flight);
     }
 
+    @Transactional
     public void deleteFlight(Long id) {
 
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equals(flight.getStatus())) {
-            throw new RuntimeException(
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+
+            throw new IllegalStateException(
                     "Cannot delete an active flight"
             );
         }
