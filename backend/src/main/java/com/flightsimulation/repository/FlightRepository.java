@@ -12,4 +12,6 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
     List<Flight> findByStatus(String status);
 
     List<Flight> findByAircraftId(Long aircraftId);
+
+    boolean existsByAircraftId(Long aircraftId);
 }
