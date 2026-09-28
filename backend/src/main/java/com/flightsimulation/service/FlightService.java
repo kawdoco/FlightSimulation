@@ -37,7 +37,10 @@ public class FlightService {
                 );
     }
 
-    public Flight createFlight(Flight flight, Long aircraftId) {
+    public Flight createFlight(
+            Flight flight,
+            Long aircraftId
+    ) {
 
         if (flightRepository.existsByFlightNumber(
                 flight.getFlightNumber()
@@ -81,7 +84,7 @@ public class FlightService {
                 .findById(aircraftId)
                 .orElseThrow(() ->
                         new RuntimeException(
-                                "Aircraft not found"
+                                "Aircraft not found with id: " + aircraftId
                         )
                 );
 
@@ -110,9 +113,27 @@ public class FlightService {
 
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equals(flight.getStatus())) {
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
             throw new RuntimeException(
                     "Flight is already in progress"
+            );
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+            throw new RuntimeException(
+                    "Completed flight cannot be started again"
+            );
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+            throw new RuntimeException(
+                    "Cancelled flight cannot be started"
             );
         }
 
@@ -131,6 +152,14 @@ public class FlightService {
 
         Flight flight = getFlightById(id);
 
+        if (!"IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+            throw new RuntimeException(
+                    "Only an active flight can be completed"
+            );
+        }
+
         Aircraft aircraft = flight.getAircraft();
 
         aircraft.setStatus("AVAILABLE");
@@ -146,9 +175,19 @@ public class FlightService {
 
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equals(flight.getStatus())) {
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
             throw new RuntimeException(
                     "Cannot cancel an active flight"
+            );
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
+            throw new RuntimeException(
+                    "Cannot cancel a completed flight"
             );
         }
 
@@ -161,12 +200,126 @@ public class FlightService {
 
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equals(flight.getStatus())) {
+        if ("IN_PROGRESS".equalsIgnoreCase(
+                flight.getStatus()
+        )) {
             throw new RuntimeException(
                     "Cannot delete an active flight"
             );
         }
 
         flightRepository.delete(flight);
+    }
+
+    // ==========================================
+    // Sprint 2 - Flight History
+    // ==========================================
+
+    public List<Flight> getFlightHistory(
+            Long aircraftId,
+            String status,
+            LocalDateTime start,
+            LocalDateTime end
+    ) {
+
+        // Aircraft + Status + Date Range
+        if (
+                aircraftId != null &&
+                status != null &&
+                !status.isBlank() &&
+                start != null &&
+                end != null
+        ) {
+
+            return flightRepository
+                    .findByAircraftIdAndStatusAndScheduledTimeBetween(
+                            aircraftId,
+                            status,
+                            start,
+                            end
+                    );
+        }
+
+        // Aircraft + Status
+        if (
+                aircraftId != null &&
+                status != null &&
+                !status.isBlank()
+        ) {
+
+            return flightRepository
+                    .findByAircraftIdAndStatus(
+                            aircraftId,
+                            status
+                    );
+        }
+
+        // Aircraft + Date Range
+        if (
+                aircraftId != null &&
+                start != null &&
+                end != null
+        ) {
+
+            return flightRepository
+                    .findByAircraftIdAndScheduledTimeBetween(
+                            aircraftId,
+                            start,
+                            end
+                    );
+        }
+
+        // Status + Date Range
+        if (
+                status != null &&
+                !status.isBlank() &&
+                start != null &&
+                end != null
+        ) {
+
+            return flightRepository
+                    .findByStatusAndScheduledTimeBetween(
+                            status,
+                            start,
+                            end
+                    );
+        }
+
+        // Aircraft only
+        if (aircraftId != null) {
+
+            return flightRepository
+                    .findByAircraftId(
+                            aircraftId
+                    );
+        }
+
+        // Status only
+        if (
+                status != null &&
+                !status.isBlank()
+        ) {
+
+            return flightRepository
+                    .findByStatus(
+                            status
+                    );
+        }
+
+        // Date range only
+        if (
+                start != null &&
+                end != null
+        ) {
+
+            return flightRepository
+                    .findByScheduledTimeBetween(
+                            start,
+                            end
+                    );
+        }
+
+        // No filters
+        return flightRepository.findAll();
     }
 }
