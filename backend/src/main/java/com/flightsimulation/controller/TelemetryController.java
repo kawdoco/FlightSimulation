@@ -2,7 +2,7 @@ package com.flightsimulation.controller;
 
 import com.flightsimulation.entity.Telemetry;
 import com.flightsimulation.service.TelemetryService;
-
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -26,19 +26,19 @@ public class TelemetryController {
     }
 
     @PostMapping("/{flightId}")
-    public ResponseEntity<Telemetry> saveTelemetry(
-            @PathVariable Long flightId,
-            @RequestBody Telemetry telemetry
-    ) {
-        Telemetry saved = telemetryService.saveTelemetry(flightId, telemetry);
+public ResponseEntity<Telemetry> saveTelemetry(
+        @PathVariable Long flightId,
+        @Valid @RequestBody Telemetry telemetry
+) {
+    Telemetry saved = telemetryService.saveTelemetry(flightId, telemetry);
 
-        messagingTemplate.convertAndSend(
-                "/topic/telemetry/" + flightId,
-                saved
-        );
+    messagingTemplate.convertAndSend(
+            "/topic/telemetry/" + flightId,
+            saved
+    );
 
-        return ResponseEntity.ok(saved);
-    }
+    return ResponseEntity.ok(saved);
+}
 
     @GetMapping("/{flightId}")
     public ResponseEntity<List<Telemetry>>
