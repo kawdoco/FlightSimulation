@@ -36,7 +36,10 @@ const AircraftPage = () => {
       setAircraft(data);
     } catch (err) {
       console.error(err);
+<<<<<<< HEAD
+=======
 
+>>>>>>> origin/develop
       setError("Unable to load aircraft.");
     } finally {
       setLoading(false);
@@ -69,20 +72,50 @@ const AircraftPage = () => {
 
     const payload = {
       ...form,
+<<<<<<< HEAD
+
+      fuelCapacity:
+        form.fuelCapacity === ""
+          ? 0
+          : Number(form.fuelCapacity),
+
+      maxSpeed:
+        form.maxSpeed === ""
+          ? 0
+          : Number(form.maxSpeed),
+
+      maxAltitude:
+        form.maxAltitude === ""
+          ? 0
+          : Number(form.maxAltitude),
+=======
       fuelCapacity: Number(form.fuelCapacity),
       maxSpeed: Number(form.maxSpeed),
       maxAltitude: Number(form.maxAltitude),
+>>>>>>> origin/develop
     };
 
     try {
       if (editingId) {
         await updateAircraft(editingId, payload);
 
+<<<<<<< HEAD
+        setMessage(
+          "Aircraft updated successfully."
+        );
+      } else {
+        await createAircraft(payload);
+
+        setMessage(
+          "Aircraft added successfully."
+        );
+=======
         setMessage("Aircraft updated successfully.");
       } else {
         await createAircraft(payload);
 
         setMessage("Aircraft added successfully.");
+>>>>>>> origin/develop
       }
 
       resetForm();
@@ -91,11 +124,17 @@ const AircraftPage = () => {
     } catch (err) {
       console.error(err);
 
+<<<<<<< HEAD
+      setError(
+        "Unable to save aircraft. Check the registration number and input values."
+      );
+=======
       const backendError =
         err.response?.data?.error ||
         "Unable to save aircraft. Check the registration number and input values.";
 
       setError(backendError);
+>>>>>>> origin/develop
     }
   };
 
@@ -103,6 +142,28 @@ const AircraftPage = () => {
     setEditingId(item.id);
 
     setForm({
+<<<<<<< HEAD
+      registrationNumber:
+        item.registrationNumber ?? "",
+
+      model:
+        item.model ?? "",
+
+      manufacturer:
+        item.manufacturer ?? "",
+
+      status:
+        item.status ?? "AVAILABLE",
+
+      fuelCapacity:
+        item.fuelCapacity ?? "",
+
+      maxSpeed:
+        item.maxSpeed ?? "",
+
+      maxAltitude:
+        item.maxAltitude ?? "",
+=======
       registrationNumber: item.registrationNumber ?? "",
       model: item.model ?? "",
       manufacturer: item.manufacturer ?? "",
@@ -110,6 +171,7 @@ const AircraftPage = () => {
       fuelCapacity: item.fuelCapacity ?? "",
       maxSpeed: item.maxSpeed ?? "",
       maxAltitude: item.maxAltitude ?? "",
+>>>>>>> origin/develop
     });
 
     window.scrollTo({
@@ -128,33 +190,56 @@ const AircraftPage = () => {
     }
 
     try {
+<<<<<<< HEAD
+      await deleteAircraft(id);
+
+      setMessage(
+        "Aircraft deleted successfully."
+      );
+=======
       setMessage("");
       setError("");
 
       await deleteAircraft(id);
 
       setMessage("Aircraft deleted successfully.");
+>>>>>>> origin/develop
 
       await loadAircraft();
     } catch (err) {
       console.error(err);
 
+<<<<<<< HEAD
+      setError(
+        "Unable to delete aircraft."
+      );
+=======
       const backendError =
         err.response?.data?.error ||
         "Unable to delete aircraft.";
 
       setError(backendError);
+>>>>>>> origin/develop
     }
   };
 
   return (
     <div className="aircraft-page">
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/develop
       <div className="page-header">
         <div>
           <h1>Aircraft Management</h1>
 
           <p>
+<<<<<<< HEAD
+            Manage aircraft available for flight
+            simulation and monitoring.
+=======
             Manage aircraft available for flight simulation and monitoring.
+>>>>>>> origin/develop
           </p>
         </div>
 
@@ -176,6 +261,10 @@ const AircraftPage = () => {
       )}
 
       <section className="management-card">
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/develop
         <div className="management-card-header">
           <h2>
             {editingId
@@ -225,7 +314,10 @@ const AircraftPage = () => {
               value={form.manufacturer}
               onChange={handleChange}
               placeholder="Airbus"
+<<<<<<< HEAD
+=======
               required
+>>>>>>> origin/develop
             />
           </div>
 
@@ -236,7 +328,10 @@ const AircraftPage = () => {
               name="status"
               value={form.status}
               onChange={handleChange}
+<<<<<<< HEAD
+=======
               required
+>>>>>>> origin/develop
             >
               <option value="AVAILABLE">
                 Available
@@ -250,8 +345,13 @@ const AircraftPage = () => {
                 Maintenance
               </option>
 
+<<<<<<< HEAD
+              <option value="GROUNDED">
+                Grounded
+=======
               <option value="OUT_OF_SERVICE">
                 Out of Service
+>>>>>>> origin/develop
               </option>
             </select>
           </div>
@@ -263,12 +363,19 @@ const AircraftPage = () => {
 
             <input
               type="number"
+<<<<<<< HEAD
+              min="0"
+=======
               min="1"
+>>>>>>> origin/develop
               name="fuelCapacity"
               value={form.fuelCapacity}
               onChange={handleChange}
               placeholder="24210"
+<<<<<<< HEAD
+=======
               required
+>>>>>>> origin/develop
             />
           </div>
 
@@ -279,12 +386,19 @@ const AircraftPage = () => {
 
             <input
               type="number"
+<<<<<<< HEAD
+              min="0"
+=======
               min="1"
+>>>>>>> origin/develop
               name="maxSpeed"
               value={form.maxSpeed}
               onChange={handleChange}
               placeholder="871"
+<<<<<<< HEAD
+=======
               required
+>>>>>>> origin/develop
             />
           </div>
 
@@ -295,12 +409,19 @@ const AircraftPage = () => {
 
             <input
               type="number"
+<<<<<<< HEAD
+              min="0"
+=======
               min="1"
+>>>>>>> origin/develop
               name="maxAltitude"
               value={form.maxAltitude}
               onChange={handleChange}
               placeholder="39800"
+<<<<<<< HEAD
+=======
               required
+>>>>>>> origin/develop
             />
           </div>
 
@@ -324,10 +445,18 @@ const AircraftPage = () => {
               </button>
             )}
           </div>
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/develop
         </form>
       </section>
 
       <section className="management-card">
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/develop
         <div className="management-card-header">
           <h2>Aircraft Fleet</h2>
         </div>
@@ -340,7 +469,13 @@ const AircraftPage = () => {
           </div>
         ) : (
           <div className="table-wrapper">
+<<<<<<< HEAD
+
             <table className="aircraft-table">
+
+=======
+            <table className="aircraft-table">
+>>>>>>> origin/develop
               <thead>
                 <tr>
                   <th>ID</th>
@@ -348,7 +483,10 @@ const AircraftPage = () => {
                   <th>Model</th>
                   <th>Manufacturer</th>
                   <th>Status</th>
+<<<<<<< HEAD
+=======
                   <th>Fuel Capacity</th>
+>>>>>>> origin/develop
                   <th>Max Speed</th>
                   <th>Max Altitude</th>
                   <th>Actions</th>
@@ -356,8 +494,15 @@ const AircraftPage = () => {
               </thead>
 
               <tbody>
+<<<<<<< HEAD
+
                 {aircraft.map((item) => (
                   <tr key={item.id}>
+
+=======
+                {aircraft.map((item) => (
+                  <tr key={item.id}>
+>>>>>>> origin/develop
                     <td>{item.id}</td>
 
                     <td>
@@ -375,7 +520,11 @@ const AircraftPage = () => {
                         className={`aircraft-status ${
                           item.status
                             ?.toLowerCase()
+<<<<<<< HEAD
+                            .replace("_", "-")
+=======
                             .replace(/_/g, "-")
+>>>>>>> origin/develop
                         }`}
                       >
                         {item.status}
@@ -383,10 +532,13 @@ const AircraftPage = () => {
                     </td>
 
                     <td>
+<<<<<<< HEAD
+=======
                       {item.fuelCapacity} L
                     </td>
 
                     <td>
+>>>>>>> origin/develop
                       {item.maxSpeed} km/h
                     </td>
 
@@ -396,6 +548,10 @@ const AircraftPage = () => {
 
                     <td>
                       <div className="table-actions">
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/develop
                         <button
                           className="edit-btn"
                           onClick={() =>
@@ -413,6 +569,23 @@ const AircraftPage = () => {
                         >
                           Delete
                         </button>
+<<<<<<< HEAD
+
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
+      </section>
+
+=======
                       </div>
                     </td>
                   </tr>
@@ -422,6 +595,7 @@ const AircraftPage = () => {
           </div>
         )}
       </section>
+>>>>>>> origin/develop
     </div>
   );
 };

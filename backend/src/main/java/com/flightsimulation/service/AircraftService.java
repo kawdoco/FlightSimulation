@@ -1,10 +1,14 @@
 package com.flightsimulation.service;
 
 import com.flightsimulation.entity.Aircraft;
+<<<<<<< HEAD
+import com.flightsimulation.repository.AircraftRepository;
+=======
 import com.flightsimulation.exception.DuplicateResourceException;
 import com.flightsimulation.exception.ResourceNotFoundException;
 import com.flightsimulation.repository.AircraftRepository;
 import com.flightsimulation.repository.FlightRepository;
+>>>>>>> origin/develop
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +17,11 @@ import java.util.List;
 public class AircraftService {
 
     private final AircraftRepository aircraftRepository;
+<<<<<<< HEAD
+
+    public AircraftService(AircraftRepository aircraftRepository) {
+        this.aircraftRepository = aircraftRepository;
+=======
     private final FlightRepository flightRepository;
 
     public AircraftService(
@@ -21,6 +30,7 @@ public class AircraftService {
     ) {
         this.aircraftRepository = aircraftRepository;
         this.flightRepository = flightRepository;
+>>>>>>> origin/develop
     }
 
     public List<Aircraft> getAllAircraft() {
@@ -30,26 +40,63 @@ public class AircraftService {
     public Aircraft getAircraftById(Long id) {
         return aircraftRepository.findById(id)
                 .orElseThrow(() ->
+<<<<<<< HEAD
+                        new RuntimeException("Aircraft not found with id: " + id));
+=======
                         new ResourceNotFoundException(
                                 "Aircraft not found with id: " + id
                         )
                 );
+>>>>>>> origin/develop
     }
 
     public Aircraft createAircraft(Aircraft aircraft) {
 
         if (aircraftRepository.existsByRegistrationNumber(
+<<<<<<< HEAD
+                aircraft.getRegistrationNumber())) {
+
+            throw new RuntimeException(
+                    "Aircraft registration number already exists");
+=======
                 aircraft.getRegistrationNumber()
         )) {
 
             throw new DuplicateResourceException(
                     "Aircraft registration number already exists"
             );
+>>>>>>> origin/develop
         }
 
         return aircraftRepository.save(aircraft);
     }
 
+<<<<<<< HEAD
+    public Aircraft updateAircraft(Long id, Aircraft updatedAircraft) {
+
+        Aircraft existingAircraft = getAircraftById(id);
+
+        existingAircraft.setRegistrationNumber(
+                updatedAircraft.getRegistrationNumber());
+
+        existingAircraft.setModel(
+                updatedAircraft.getModel());
+
+        existingAircraft.setManufacturer(
+                updatedAircraft.getManufacturer());
+
+        existingAircraft.setStatus(
+                updatedAircraft.getStatus());
+
+        existingAircraft.setFuelCapacity(
+                updatedAircraft.getFuelCapacity());
+
+        existingAircraft.setMaxSpeed(
+                updatedAircraft.getMaxSpeed());
+
+        existingAircraft.setMaxAltitude(
+                updatedAircraft.getMaxAltitude());
+=======
     public Aircraft updateAircraft(
             Long id,
             Aircraft updatedAircraft
@@ -107,11 +154,15 @@ public class AircraftService {
         existingAircraft.setMaxAltitude(
                 updatedAircraft.getMaxAltitude()
         );
+>>>>>>> origin/develop
 
         return aircraftRepository.save(existingAircraft);
     }
 
     public void deleteAircraft(Long id) {
+<<<<<<< HEAD
+        Aircraft aircraft = getAircraftById(id);
+=======
 
         Aircraft aircraft = getAircraftById(id);
 
@@ -136,6 +187,7 @@ public class AircraftService {
             );
         }
 
+>>>>>>> origin/develop
         aircraftRepository.delete(aircraft);
     }
 }

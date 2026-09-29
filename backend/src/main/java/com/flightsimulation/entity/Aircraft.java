@@ -2,8 +2,12 @@ package com.flightsimulation.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+<<<<<<< HEAD
+import jakarta.validation.constraints.PositiveOrZero;
+=======
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Pattern;
+>>>>>>> origin/develop
 
 @Entity
 @Table(name = "aircraft")
@@ -13,6 +17,30 @@ public class Aircraft {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+<<<<<<< HEAD
+    @NotBlank
+    @Column(name = "registration_number", nullable = false, unique = true)
+    private String registrationNumber;
+
+    @NotBlank
+    @Column(nullable = false)
+    private String model;
+
+    private String manufacturer;
+
+    @Column(nullable = false)
+    private String status = "AVAILABLE";
+
+    @PositiveOrZero
+    @Column(name = "fuel_capacity")
+    private Double fuelCapacity;
+
+    @PositiveOrZero
+    @Column(name = "max_speed")
+    private Double maxSpeed;
+
+    @PositiveOrZero
+=======
     @NotBlank(message = "Registration number is required")
     @Column(name = "registration_number", nullable = false, unique = true)
     private String registrationNumber;
@@ -42,6 +70,7 @@ public class Aircraft {
     private Double maxSpeed;
 
     @Positive(message = "Maximum altitude must be greater than zero")
+>>>>>>> origin/develop
     @Column(name = "max_altitude")
     private Double maxAltitude;
 
