@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -41,6 +42,29 @@ public class FlightController {
 
         return ResponseEntity.ok(
                 flightService.getFlightById(id)
+        );
+    }
+
+    // ==========================================
+    // Sprint 2 - Flight History
+    // ==========================================
+
+    @GetMapping("/history")
+    public ResponseEntity<List<Flight>>
+    getFlightHistory(
+            @RequestParam(required = false) Long aircraftId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) LocalDateTime start,
+            @RequestParam(required = false) LocalDateTime end
+    ) {
+
+        return ResponseEntity.ok(
+                flightService.getFlightHistory(
+                        aircraftId,
+                        status,
+                        start,
+                        end
+                )
         );
     }
 
