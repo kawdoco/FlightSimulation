@@ -2,7 +2,12 @@ package com.flightsimulation.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+<<<<<<< HEAD
 import jakarta.validation.constraints.PositiveOrZero;
+=======
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
+>>>>>>> origin/develop
 
 @Entity
 @Table(name = "aircraft")
@@ -12,6 +17,7 @@ public class Aircraft {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+<<<<<<< HEAD
     @NotBlank
     @Column(name = "registration_number", nullable = false, unique = true)
     private String registrationNumber;
@@ -34,6 +40,37 @@ public class Aircraft {
     private Double maxSpeed;
 
     @PositiveOrZero
+=======
+    @NotBlank(message = "Registration number is required")
+    @Column(name = "registration_number", nullable = false, unique = true)
+    private String registrationNumber;
+
+    @NotBlank(message = "Model is required")
+    @Column(nullable = false)
+    private String model;
+
+    @NotBlank(message = "Manufacturer is required")
+    @Column(nullable = false)
+    private String manufacturer;
+
+    @NotBlank(message = "Status is required")
+    @Pattern(
+            regexp = "AVAILABLE|IN_FLIGHT|MAINTENANCE|OUT_OF_SERVICE",
+            message = "Status must be AVAILABLE, IN_FLIGHT, MAINTENANCE, or OUT_OF_SERVICE"
+    )
+    @Column(nullable = false)
+    private String status = "AVAILABLE";
+
+    @Positive(message = "Fuel capacity must be greater than zero")
+    @Column(name = "fuel_capacity")
+    private Double fuelCapacity;
+
+    @Positive(message = "Maximum speed must be greater than zero")
+    @Column(name = "max_speed")
+    private Double maxSpeed;
+
+    @Positive(message = "Maximum altitude must be greater than zero")
+>>>>>>> origin/develop
     @Column(name = "max_altitude")
     private Double maxAltitude;
 

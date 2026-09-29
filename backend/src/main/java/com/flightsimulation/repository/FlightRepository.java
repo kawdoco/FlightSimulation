@@ -14,6 +14,7 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
 
     List<Flight> findByAircraftId(Long aircraftId);
 
+<<<<<<< HEAD
     List<Flight> findByAircraftIdAndStatus(
             Long aircraftId,
             String status
@@ -42,4 +43,7 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
             LocalDateTime start,
             LocalDateTime end
     );
+=======
+    boolean existsByAircraftId(Long aircraftId);
+>>>>>>> origin/develop
 }

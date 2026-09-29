@@ -27,28 +27,18 @@ const FlightPage = () => {
   const [aircraft, setAircraft] = useState([]);
 
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
 
-  const [editingId, setEditingId] =
-    useState(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [message, setMessage] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const [
-        flightData,
-        aircraftData,
-      ] = await Promise.all([
+      const [flightData, aircraftData] = await Promise.all([
         getAllFlights(),
         getAllAircraft(),
       ]);
@@ -59,7 +49,8 @@ const FlightPage = () => {
       console.error(err);
 
       setError(
-        "Unable to load flight data."
+        err.response?.data?.error ||
+          "Unable to load flight data."
       );
     } finally {
       setLoading(false);
@@ -71,10 +62,7 @@ const FlightPage = () => {
   }, []);
 
   const handleChange = (event) => {
-    const {
-      name,
-      value,
-    } = event.target;
+    const { name, value } = event.target;
 
     setForm((current) => ({
       ...current,
@@ -87,6 +75,14 @@ const FlightPage = () => {
     setEditingId(null);
   };
 
+  const getBackendError = (err, fallbackMessage) => {
+    return (
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      fallbackMessage
+    );
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -94,27 +90,34 @@ const FlightPage = () => {
     setError("");
 
     if (!form.aircraftId) {
-      setError(
-        "Please select an aircraft."
-      );
+      setError("Please select an aircraft.");
+      return;
+    }
 
+    const selectedAircraft = aircraft.find(
+      (item) =>
+        String(item.id) === String(form.aircraftId)
+    );
+
+    if (!selectedAircraft) {
+      setError("Selected aircraft could not be found.");
+      return;
+    }
+
+    if (selectedAircraft.status !== "AVAILABLE") {
+      setError(
+        `Aircraft ${selectedAircraft.registrationNumber} is unavailable. Current status: ${selectedAircraft.status}`
+      );
       return;
     }
 
     const payload = {
-      flightNumber:
-        form.flightNumber,
-
-      departure:
-        form.departure,
-
-      destination:
-        form.destination,
-
-      scheduledTime:
-        form.scheduledTime
-          ? `${form.scheduledTime}:00`
-          : null,
+      flightNumber: form.flightNumber,
+      departure: form.departure,
+      destination: form.destination,
+      scheduledTime: form.scheduledTime
+        ? `${form.scheduledTime}:00`
+        : null,
     };
 
     try {
@@ -140,17 +143,16 @@ const FlightPage = () => {
       }
 
       resetForm();
-
       await loadData();
+
     } catch (err) {
       console.error(err);
 
-      const backendMessage =
-        err.response?.data?.message;
-
       setError(
-        backendMessage ||
+        getBackendError(
+          err,
           "Unable to save flight."
+        )
       );
     }
   };
@@ -162,10 +164,7 @@ const FlightPage = () => {
 
     if (flight.scheduledTime) {
       scheduledTime =
-        flight.scheduledTime.slice(
-          0,
-          16
-        );
+        flight.scheduledTime.slice(0, 16);
     }
 
     setForm({
@@ -190,109 +189,140 @@ const FlightPage = () => {
     });
   };
 
-  const handleStart = async (id) => {
-    try {
-      await startFlight(id);
+  const handleStart = async (flight) => {
+    setMessage("");
+    setError("");
 
-      setMessage(
-        "Flight started."
+    if (
+      flight.aircraft?.status !== "AVAILABLE"
+    ) {
+      setError(
+        `Aircraft ${
+          flight.aircraft?.registrationNumber || ""
+        } is unavailable. Current status: ${
+          flight.aircraft?.status || "UNKNOWN"
+        }`
       );
 
+      return;
+    }
+
+    try {
+      await startFlight(flight.id);
+
+      setMessage("Flight started.");
+
       await loadData();
+
     } catch (err) {
       console.error(err);
 
       setError(
-        "Unable to start flight."
+        getBackendError(
+          err,
+          "Unable to start flight."
+        )
       );
     }
   };
 
   const handleComplete = async (id) => {
+    setMessage("");
+    setError("");
+
     try {
       await completeFlight(id);
 
-      setMessage(
-        "Flight completed."
-      );
+      setMessage("Flight completed.");
 
       await loadData();
+
     } catch (err) {
       console.error(err);
 
       setError(
-        "Unable to complete flight."
+        getBackendError(
+          err,
+          "Unable to complete flight."
+        )
       );
     }
   };
 
   const handleCancel = async (id) => {
     const confirmed =
-      window.confirm(
-        "Cancel this flight?"
-      );
+      window.confirm("Cancel this flight?");
 
     if (!confirmed) {
       return;
     }
 
+    setMessage("");
+    setError("");
+
     try {
       await cancelFlight(id);
 
-      setMessage(
-        "Flight cancelled."
-      );
+      setMessage("Flight cancelled.");
 
       await loadData();
+
     } catch (err) {
       console.error(err);
 
       setError(
-        "Unable to cancel flight."
+        getBackendError(
+          err,
+          "Unable to cancel flight."
+        )
       );
     }
   };
 
   const handleDelete = async (id) => {
     const confirmed =
-      window.confirm(
-        "Delete this flight?"
-      );
+      window.confirm("Delete this flight?");
 
     if (!confirmed) {
       return;
     }
 
+    setMessage("");
+    setError("");
+
     try {
       await deleteFlight(id);
 
-      setMessage(
-        "Flight deleted."
-      );
+      setMessage("Flight deleted.");
 
       await loadData();
+
     } catch (err) {
       console.error(err);
 
       setError(
-        "Unable to delete flight."
+        getBackendError(
+          err,
+          "Unable to delete flight."
+        )
       );
     }
   };
+
+  const availableAircraft = aircraft.filter(
+    (item) => item.status === "AVAILABLE"
+  );
 
   return (
     <div className="flight-page">
 
       <div className="page-header">
         <div>
-          <h1>
-            Flight Management
-          </h1>
+          <h1>Flight Management</h1>
 
           <p>
-            Schedule, start, monitor
-            and complete aircraft
-            simulation flights.
+            Schedule, start, monitor and complete
+            aircraft simulation flights.
           </p>
         </div>
 
@@ -329,7 +359,6 @@ const FlightPage = () => {
         >
 
           <div className="form-group">
-
             <label>
               Flight Number
             </label>
@@ -337,18 +366,14 @@ const FlightPage = () => {
             <input
               type="text"
               name="flightNumber"
-              value={
-                form.flightNumber
-              }
+              value={form.flightNumber}
               onChange={handleChange}
               placeholder="FS-001"
               required
             />
-
           </div>
 
           <div className="form-group">
-
             <label>
               Departure
             </label>
@@ -356,18 +381,14 @@ const FlightPage = () => {
             <input
               type="text"
               name="departure"
-              value={
-                form.departure
-              }
+              value={form.departure}
               onChange={handleChange}
               placeholder="Colombo"
               required
             />
-
           </div>
 
           <div className="form-group">
-
             <label>
               Destination
             </label>
@@ -375,18 +396,14 @@ const FlightPage = () => {
             <input
               type="text"
               name="destination"
-              value={
-                form.destination
-              }
+              value={form.destination}
               onChange={handleChange}
               placeholder="Dubai"
               required
             />
-
           </div>
 
           <div className="form-group">
-
             <label>
               Scheduled Time
             </label>
@@ -394,59 +411,54 @@ const FlightPage = () => {
             <input
               type="datetime-local"
               name="scheduledTime"
-              value={
-                form.scheduledTime
-              }
+              value={form.scheduledTime}
               onChange={handleChange}
               required
             />
-
           </div>
 
           <div className="form-group">
-
             <label>
               Aircraft
             </label>
 
             <select
               name="aircraftId"
-              value={
-                form.aircraftId
-              }
+              value={form.aircraftId}
               onChange={handleChange}
               required
             >
-
               <option value="">
-                Select Aircraft
+                Select Available Aircraft
               </option>
 
-              {aircraft.map((item) => (
+              {availableAircraft.map((item) => (
                 <option
                   key={item.id}
                   value={item.id}
                 >
-                  {
-                    item.registrationNumber
-                  }
+                  {item.registrationNumber}
                   {" - "}
                   {item.model}
-                  {" ("}
-                  {item.status}
-                  {")"}
+                  {" (AVAILABLE)"}
                 </option>
               ))}
-
             </select>
 
+            {availableAircraft.length === 0 && (
+              <p className="availability-message">
+                No aircraft are currently available.
+              </p>
+            )}
           </div>
 
           <div className="form-actions">
-
             <button
               className="primary-btn"
               type="submit"
+              disabled={
+                availableAircraft.length === 0
+              }
             >
               {editingId
                 ? "Update Flight"
@@ -462,11 +474,9 @@ const FlightPage = () => {
                 Cancel Edit
               </button>
             )}
-
           </div>
 
         </form>
-
       </section>
 
       <section className="management-card">
@@ -481,11 +491,15 @@ const FlightPage = () => {
           <p>
             Loading flights...
           </p>
+
         ) : flights.length === 0 ? (
+
           <div className="empty-state">
             No flights scheduled.
           </div>
+
         ) : (
+
           <div className="table-wrapper">
 
             <table className="aircraft-table">
@@ -513,24 +527,25 @@ const FlightPage = () => {
                     </td>
 
                     <td>
-                      {
-                        flight.flightNumber
-                      }
+                      {flight.flightNumber}
                     </td>
 
                     <td>
-                      {
-                        flight.aircraft
-                          ?.registrationNumber
-                      }
+                      {flight.aircraft
+                        ?.registrationNumber}
+
+                      {flight.aircraft?.status && (
+                        <>
+                          {" "}
+                          ({flight.aircraft.status})
+                        </>
+                      )}
                     </td>
 
                     <td>
                       {flight.departure}
                       {" → "}
-                      {
-                        flight.destination
-                      }
+                      {flight.destination}
                     </td>
 
                     <td>
@@ -546,10 +561,7 @@ const FlightPage = () => {
                         className={`aircraft-status ${
                           flight.status
                             ?.toLowerCase()
-                            .replaceAll(
-                              "_",
-                              "-"
-                            )
+                            .replaceAll("_", "-")
                         }`}
                       >
                         {flight.status}
@@ -563,12 +575,11 @@ const FlightPage = () => {
                         {flight.status ===
                           "SCHEDULED" && (
                           <>
+
                             <button
                               className="edit-btn"
                               onClick={() =>
-                                handleEdit(
-                                  flight
-                                )
+                                handleEdit(flight)
                               }
                             >
                               Edit
@@ -576,13 +587,27 @@ const FlightPage = () => {
 
                             <button
                               className="start-btn"
+                              disabled={
+                                flight.aircraft
+                                  ?.status !==
+                                "AVAILABLE"
+                              }
+                              title={
+                                flight.aircraft
+                                  ?.status !==
+                                "AVAILABLE"
+                                  ? `Aircraft unavailable: ${flight.aircraft?.status}`
+                                  : "Start flight"
+                              }
                               onClick={() =>
-                                handleStart(
-                                  flight.id
-                                )
+                                handleStart(flight)
                               }
                             >
-                              Start
+                              {flight.aircraft
+                                ?.status ===
+                              "AVAILABLE"
+                                ? "Start"
+                                : "Unavailable"}
                             </button>
 
                             <button
@@ -595,11 +620,13 @@ const FlightPage = () => {
                             >
                               Cancel
                             </button>
+
                           </>
                         )}
 
                         {flight.status ===
                           "IN_PROGRESS" && (
+
                           <button
                             className="complete-btn"
                             onClick={() =>
@@ -610,10 +637,12 @@ const FlightPage = () => {
                           >
                             Complete
                           </button>
+
                         )}
 
                         {flight.status !==
                           "IN_PROGRESS" && (
+
                           <button
                             className="delete-btn"
                             onClick={() =>
@@ -624,6 +653,7 @@ const FlightPage = () => {
                           >
                             Delete
                           </button>
+
                         )}
 
                       </div>
