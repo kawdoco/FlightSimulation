@@ -17,30 +17,83 @@ const emptyForm = {
   maxAltitude: "",
 };
 
-const AircraftPage = () => {
+const fields = [
+  {
+    name: "registrationNumber",
+    label: "Registration Number",
+    type: "text",
+    placeholder: "4R-ABC",
+  },
+  {
+    name: "model",
+    label: "Model",
+    type: "text",
+    placeholder: "Airbus A320",
+  },
+  {
+    name: "manufacturer",
+    label: "Manufacturer",
+    type: "text",
+    placeholder: "Airbus",
+  },
+  {
+    name: "fuelCapacity",
+    label: "Fuel Capacity (L)",
+    type: "number",
+    placeholder: "24210",
+  },
+  {
+    name: "maxSpeed",
+    label: "Maximum Speed (km/h)",
+    type: "number",
+    placeholder: "871",
+  },
+  {
+    name: "maxAltitude",
+    label: "Maximum Altitude (ft)",
+    type: "number",
+    placeholder: "39800",
+  },
+];
+
+function getErrorMessage(error, fallback) {
+  const data = error.response?.data;
+
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
+
+  if (typeof data?.error === "string") {
+    return data.error;
+  }
+
+  return fallback;
+}
+
+function AircraftPage() {
   const [aircraft, setAircraft] = useState([]);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const loadAircraft = async () => {
+    setLoading(true);
+
     try {
-      setLoading(true);
-      setError("");
-
       const data = await getAllAircraft();
-
       setAircraft(data);
     } catch (err) {
-      console.error(err);
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/develop
-      setError("Unable to load aircraft.");
+      setError(
+        getErrorMessage(err, "Unable to load aircraft.")
+      );
     } finally {
       setLoading(false);
     }
@@ -60,110 +113,78 @@ const AircraftPage = () => {
   };
 
   const resetForm = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm });
     setEditingId(null);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if (busy) {
+      return;
+    }
+
     setMessage("");
     setError("");
 
     const payload = {
       ...form,
-<<<<<<< HEAD
-
-      fuelCapacity:
-        form.fuelCapacity === ""
-          ? 0
-          : Number(form.fuelCapacity),
-
-      maxSpeed:
-        form.maxSpeed === ""
-          ? 0
-          : Number(form.maxSpeed),
-
-      maxAltitude:
-        form.maxAltitude === ""
-          ? 0
-          : Number(form.maxAltitude),
-=======
+      registrationNumber: form.registrationNumber.trim(),
+      model: form.model.trim(),
+      manufacturer: form.manufacturer.trim(),
       fuelCapacity: Number(form.fuelCapacity),
       maxSpeed: Number(form.maxSpeed),
       maxAltitude: Number(form.maxAltitude),
->>>>>>> origin/develop
     };
 
+    if (
+      !payload.registrationNumber ||
+      !payload.model ||
+      !payload.manufacturer
+    ) {
+      setError("Please complete all text fields.");
+      return;
+    }
+
+    if (
+      [payload.fuelCapacity, payload.maxSpeed, payload.maxAltitude]
+        .some((value) => !Number.isFinite(value) || value <= 0)
+    ) {
+      setError("Fuel capacity, speed and altitude must be greater than zero.");
+      return;
+    }
+
+    setBusy(true);
+
     try {
-      if (editingId) {
+      if (editingId !== null) {
         await updateAircraft(editingId, payload);
-
-<<<<<<< HEAD
-        setMessage(
-          "Aircraft updated successfully."
-        );
-      } else {
-        await createAircraft(payload);
-
-        setMessage(
-          "Aircraft added successfully."
-        );
-=======
         setMessage("Aircraft updated successfully.");
       } else {
         await createAircraft(payload);
-
         setMessage("Aircraft added successfully.");
->>>>>>> origin/develop
       }
 
       resetForm();
-
       await loadAircraft();
     } catch (err) {
-      console.error(err);
-
-<<<<<<< HEAD
       setError(
-        "Unable to save aircraft. Check the registration number and input values."
+        getErrorMessage(
+          err,
+          "Unable to save aircraft. Check the registration number and input values."
+        )
       );
-=======
-      const backendError =
-        err.response?.data?.error ||
-        "Unable to save aircraft. Check the registration number and input values.";
-
-      setError(backendError);
->>>>>>> origin/develop
+    } finally {
+      setBusy(false);
     }
   };
 
   const handleEdit = (item) => {
+    setMessage("");
+    setError("");
     setEditingId(item.id);
 
     setForm({
-<<<<<<< HEAD
-      registrationNumber:
-        item.registrationNumber ?? "",
-
-      model:
-        item.model ?? "",
-
-      manufacturer:
-        item.manufacturer ?? "",
-
-      status:
-        item.status ?? "AVAILABLE",
-
-      fuelCapacity:
-        item.fuelCapacity ?? "",
-
-      maxSpeed:
-        item.maxSpeed ?? "",
-
-      maxAltitude:
-        item.maxAltitude ?? "",
-=======
       registrationNumber: item.registrationNumber ?? "",
       model: item.model ?? "",
       manufacturer: item.manufacturer ?? "",
@@ -171,7 +192,6 @@ const AircraftPage = () => {
       fuelCapacity: item.fuelCapacity ?? "",
       maxSpeed: item.maxSpeed ?? "",
       maxAltitude: item.maxAltitude ?? "",
->>>>>>> origin/develop
     });
 
     window.scrollTo({
@@ -181,6 +201,10 @@ const AircraftPage = () => {
   };
 
   const handleDelete = async (id) => {
+    if (busy) {
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this aircraft?"
     );
@@ -189,57 +213,35 @@ const AircraftPage = () => {
       return;
     }
 
+    setMessage("");
+    setError("");
+    setBusy(true);
+
     try {
-<<<<<<< HEAD
       await deleteAircraft(id);
 
-      setMessage(
-        "Aircraft deleted successfully."
-      );
-=======
-      setMessage("");
-      setError("");
-
-      await deleteAircraft(id);
+      if (editingId === id) {
+        resetForm();
+      }
 
       setMessage("Aircraft deleted successfully.");
->>>>>>> origin/develop
-
       await loadAircraft();
     } catch (err) {
-      console.error(err);
-
-<<<<<<< HEAD
       setError(
-        "Unable to delete aircraft."
+        getErrorMessage(err, "Unable to delete aircraft.")
       );
-=======
-      const backendError =
-        err.response?.data?.error ||
-        "Unable to delete aircraft.";
-
-      setError(backendError);
->>>>>>> origin/develop
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
     <div className="aircraft-page">
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/develop
       <div className="page-header">
         <div>
           <h1>Aircraft Management</h1>
-
           <p>
-<<<<<<< HEAD
-            Manage aircraft available for flight
-            simulation and monitoring.
-=======
             Manage aircraft available for flight simulation and monitoring.
->>>>>>> origin/develop
           </p>
         </div>
 
@@ -249,25 +251,21 @@ const AircraftPage = () => {
       </div>
 
       {message && (
-        <div className="success-message">
+        <div className="success-message" role="status">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="error-message">
+        <div className="error-message" role="alert">
           {error}
         </div>
       )}
 
       <section className="management-card">
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/develop
         <div className="management-card-header">
           <h2>
-            {editingId
+            {editingId !== null
               ? "Update Aircraft"
               : "Register Aircraft"}
           </h2>
@@ -277,186 +275,73 @@ const AircraftPage = () => {
           className="aircraft-form"
           onSubmit={handleSubmit}
         >
-          <div className="form-group">
-            <label>
-              Registration Number
-            </label>
+          {fields.map((field) => (
+            <div className="form-group" key={field.name}>
+              <label htmlFor={field.name}>
+                {field.label}
+              </label>
 
-            <input
-              type="text"
-              name="registrationNumber"
-              value={form.registrationNumber}
-              onChange={handleChange}
-              placeholder="4R-ABC"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Model</label>
-
-            <input
-              type="text"
-              name="model"
-              value={form.model}
-              onChange={handleChange}
-              placeholder="Airbus A320"
-              required
-            />
-          </div>
+              <input
+                id={field.name}
+                name={field.name}
+                type={field.type}
+                value={form[field.name]}
+                onChange={handleChange}
+                placeholder={field.placeholder}
+                min={field.type === "number" ? "0.01" : undefined}
+                step={field.type === "number" ? "any" : undefined}
+                disabled={busy}
+                required
+              />
+            </div>
+          ))}
 
           <div className="form-group">
-            <label>Manufacturer</label>
-
-            <input
-              type="text"
-              name="manufacturer"
-              value={form.manufacturer}
-              onChange={handleChange}
-              placeholder="Airbus"
-<<<<<<< HEAD
-=======
-              required
->>>>>>> origin/develop
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Status</label>
+            <label htmlFor="status">Status</label>
 
             <select
+              id="status"
               name="status"
               value={form.status}
               onChange={handleChange}
-<<<<<<< HEAD
-=======
+              disabled={busy}
               required
->>>>>>> origin/develop
             >
-              <option value="AVAILABLE">
-                Available
-              </option>
-
-              <option value="IN_FLIGHT">
-                In Flight
-              </option>
-
-              <option value="MAINTENANCE">
-                Maintenance
-              </option>
-
-<<<<<<< HEAD
-              <option value="GROUNDED">
-                Grounded
-=======
-              <option value="OUT_OF_SERVICE">
-                Out of Service
->>>>>>> origin/develop
-              </option>
+              <option value="AVAILABLE">Available</option>
+              <option value="IN_FLIGHT">In Flight</option>
+              <option value="MAINTENANCE">Maintenance</option>
+              <option value="OUT_OF_SERVICE">Out of Service</option>
             </select>
-          </div>
-
-          <div className="form-group">
-            <label>
-              Fuel Capacity (L)
-            </label>
-
-            <input
-              type="number"
-<<<<<<< HEAD
-              min="0"
-=======
-              min="1"
->>>>>>> origin/develop
-              name="fuelCapacity"
-              value={form.fuelCapacity}
-              onChange={handleChange}
-              placeholder="24210"
-<<<<<<< HEAD
-=======
-              required
->>>>>>> origin/develop
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              Maximum Speed (km/h)
-            </label>
-
-            <input
-              type="number"
-<<<<<<< HEAD
-              min="0"
-=======
-              min="1"
->>>>>>> origin/develop
-              name="maxSpeed"
-              value={form.maxSpeed}
-              onChange={handleChange}
-              placeholder="871"
-<<<<<<< HEAD
-=======
-              required
->>>>>>> origin/develop
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              Maximum Altitude (ft)
-            </label>
-
-            <input
-              type="number"
-<<<<<<< HEAD
-              min="0"
-=======
-              min="1"
->>>>>>> origin/develop
-              name="maxAltitude"
-              value={form.maxAltitude}
-              onChange={handleChange}
-              placeholder="39800"
-<<<<<<< HEAD
-=======
-              required
->>>>>>> origin/develop
-            />
           </div>
 
           <div className="form-actions">
             <button
               type="submit"
               className="primary-btn"
+              disabled={busy}
             >
-              {editingId
-                ? "Update Aircraft"
-                : "Add Aircraft"}
+              {busy
+                ? "Please wait..."
+                : editingId !== null
+                  ? "Update Aircraft"
+                  : "Add Aircraft"}
             </button>
 
-            {editingId && (
+            {editingId !== null && (
               <button
                 type="button"
                 className="secondary-btn"
                 onClick={resetForm}
+                disabled={busy}
               >
                 Cancel
               </button>
             )}
           </div>
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/develop
         </form>
       </section>
 
       <section className="management-card">
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/develop
         <div className="management-card-header">
           <h2>Aircraft Fleet</h2>
         </div>
@@ -469,13 +354,7 @@ const AircraftPage = () => {
           </div>
         ) : (
           <div className="table-wrapper">
-<<<<<<< HEAD
-
             <table className="aircraft-table">
-
-=======
-            <table className="aircraft-table">
->>>>>>> origin/develop
               <thead>
                 <tr>
                   <th>ID</th>
@@ -483,10 +362,7 @@ const AircraftPage = () => {
                   <th>Model</th>
                   <th>Manufacturer</th>
                   <th>Status</th>
-<<<<<<< HEAD
-=======
                   <th>Fuel Capacity</th>
->>>>>>> origin/develop
                   <th>Max Speed</th>
                   <th>Max Altitude</th>
                   <th>Actions</th>
@@ -494,98 +370,48 @@ const AircraftPage = () => {
               </thead>
 
               <tbody>
-<<<<<<< HEAD
-
                 {aircraft.map((item) => (
                   <tr key={item.id}>
-
-=======
-                {aircraft.map((item) => (
-                  <tr key={item.id}>
->>>>>>> origin/develop
                     <td>{item.id}</td>
-
-                    <td>
-                      {item.registrationNumber}
-                    </td>
-
+                    <td>{item.registrationNumber}</td>
                     <td>{item.model}</td>
-
-                    <td>
-                      {item.manufacturer}
-                    </td>
+                    <td>{item.manufacturer}</td>
 
                     <td>
                       <span
                         className={`aircraft-status ${
-                          item.status
-                            ?.toLowerCase()
-<<<<<<< HEAD
-                            .replace("_", "-")
-=======
+                          (item.status ?? "")
+                            .toLowerCase()
                             .replace(/_/g, "-")
->>>>>>> origin/develop
                         }`}
                       >
                         {item.status}
                       </span>
                     </td>
 
-                    <td>
-<<<<<<< HEAD
-=======
-                      {item.fuelCapacity} L
-                    </td>
-
-                    <td>
->>>>>>> origin/develop
-                      {item.maxSpeed} km/h
-                    </td>
-
-                    <td>
-                      {item.maxAltitude} ft
-                    </td>
+                    <td>{item.fuelCapacity} L</td>
+                    <td>{item.maxSpeed} km/h</td>
+                    <td>{item.maxAltitude} ft</td>
 
                     <td>
                       <div className="table-actions">
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/develop
                         <button
+                          type="button"
                           className="edit-btn"
-                          onClick={() =>
-                            handleEdit(item)
-                          }
+                          onClick={() => handleEdit(item)}
+                          disabled={busy}
                         >
                           Edit
                         </button>
 
                         <button
+                          type="button"
                           className="delete-btn"
-                          onClick={() =>
-                            handleDelete(item.id)
-                          }
+                          onClick={() => handleDelete(item.id)}
+                          disabled={busy}
                         >
                           Delete
                         </button>
-<<<<<<< HEAD
-
-                      </div>
-                    </td>
-
-                  </tr>
-                ))}
-
-              </tbody>
-
-            </table>
-
-          </div>
-        )}
-      </section>
-
-=======
                       </div>
                     </td>
                   </tr>
@@ -595,9 +421,8 @@ const AircraftPage = () => {
           </div>
         )}
       </section>
->>>>>>> origin/develop
     </div>
   );
-};
+}
 
 export default AircraftPage;

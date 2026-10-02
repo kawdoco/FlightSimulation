@@ -7,15 +7,16 @@ import java.util.Optional;
 
 public interface AircraftRepository extends JpaRepository<Aircraft, Long> {
 
-    Optional<Aircraft> findByRegistrationNumber(String registrationNumber);
+    Optional<Aircraft> findByRegistrationNumber(
+            String registrationNumber
+    );
 
-    boolean existsByRegistrationNumber(String registrationNumber);
-<<<<<<< HEAD
-=======
+    boolean existsByRegistrationNumber(
+            String registrationNumber
+    );
 
     boolean existsByRegistrationNumberAndIdNot(
             String registrationNumber,
             Long id
     );
->>>>>>> origin/develop
 }

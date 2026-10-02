@@ -40,8 +40,6 @@ public class FlightService {
                 );
     }
 
-<<<<<<< HEAD
-=======
     private Aircraft getAircraftById(Long aircraftId) {
         return aircraftRepository.findById(aircraftId)
                 .orElseThrow(() ->
@@ -52,9 +50,7 @@ public class FlightService {
     }
 
     private void validateAircraftAvailability(Aircraft aircraft) {
-
         if (!"AVAILABLE".equalsIgnoreCase(aircraft.getStatus())) {
-
             throw new IllegalStateException(
                     "Aircraft "
                             + aircraft.getRegistrationNumber()
@@ -65,24 +61,19 @@ public class FlightService {
     }
 
     @Transactional
->>>>>>> origin/develop
     public Flight createFlight(
             Flight flight,
             Long aircraftId
     ) {
-
         if (flightRepository.existsByFlightNumber(
                 flight.getFlightNumber()
         )) {
-
             throw new DuplicateResourceException(
                     "Flight number already exists"
             );
         }
 
         Aircraft aircraft = getAircraftById(aircraftId);
-
-        // Only AVAILABLE aircraft can be assigned
         validateAircraftAvailability(aircraft);
 
         flight.setAircraft(aircraft);
@@ -97,68 +88,32 @@ public class FlightService {
             Flight updatedFlight,
             Long aircraftId
     ) {
-
         Flight existing = getFlightById(id);
 
-<<<<<<< HEAD
-        Aircraft aircraft = aircraftRepository
-                .findById(aircraftId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Aircraft not found with id: " + aircraftId
-                        )
-                );
-=======
-        // Active flights must not be edited
-        if ("IN_PROGRESS".equalsIgnoreCase(
-                existing.getStatus()
-        )) {
-
+        if (!"SCHEDULED".equalsIgnoreCase(existing.getStatus())) {
             throw new IllegalStateException(
-                    "Cannot update a flight that is currently in progress"
+                    "Only a scheduled flight can be updated"
             );
         }
 
-        if ("COMPLETED".equalsIgnoreCase(
-                existing.getStatus()
+        if (!java.util.Objects.equals(
+                existing.getFlightNumber(),
+                updatedFlight.getFlightNumber()
+        ) && flightRepository.existsByFlightNumber(
+                updatedFlight.getFlightNumber()
         )) {
-
-            throw new IllegalStateException(
-                    "Cannot update a completed flight"
-            );
-        }
-
-        if ("CANCELLED".equalsIgnoreCase(
-                existing.getStatus()
-        )) {
-
-            throw new IllegalStateException(
-                    "Cannot update a cancelled flight"
+            throw new DuplicateResourceException(
+                    "Flight number already exists"
             );
         }
 
         Aircraft aircraft = getAircraftById(aircraftId);
-
-        // Prevent assigning unavailable aircraft
         validateAircraftAvailability(aircraft);
->>>>>>> origin/develop
 
-        existing.setFlightNumber(
-                updatedFlight.getFlightNumber()
-        );
-
-        existing.setDeparture(
-                updatedFlight.getDeparture()
-        );
-
-        existing.setDestination(
-                updatedFlight.getDestination()
-        );
-
-        existing.setScheduledTime(
-                updatedFlight.getScheduledTime()
-        );
-
+        existing.setFlightNumber(updatedFlight.getFlightNumber());
+        existing.setDeparture(updatedFlight.getDeparture());
+        existing.setDestination(updatedFlight.getDestination());
+        existing.setScheduledTime(updatedFlight.getScheduledTime());
         existing.setAircraft(aircraft);
 
         return flightRepository.save(existing);
@@ -166,56 +121,18 @@ public class FlightService {
 
     @Transactional
     public Flight startFlight(Long id) {
-
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-=======
-
+        if (!"SCHEDULED".equalsIgnoreCase(flight.getStatus())) {
             throw new IllegalStateException(
->>>>>>> origin/develop
-                    "Flight is already in progress"
-            );
-        }
-
-        if ("COMPLETED".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-=======
-
-            throw new IllegalStateException(
->>>>>>> origin/develop
-                    "Completed flight cannot be started again"
-            );
-        }
-
-        if ("CANCELLED".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-=======
-
-            throw new IllegalStateException(
->>>>>>> origin/develop
-                    "Cancelled flight cannot be started"
+                    "Only a scheduled flight can be started"
             );
         }
 
         Aircraft aircraft = flight.getAircraft();
-
-        // Check availability again before starting
         validateAircraftAvailability(aircraft);
 
-        // Aircraft is now being used by the flight
         aircraft.setStatus("IN_FLIGHT");
-
         aircraftRepository.save(aircraft);
 
         flight.setStatus("IN_PROGRESS");
@@ -226,30 +143,22 @@ public class FlightService {
 
     @Transactional
     public Flight completeFlight(Long id) {
-
         Flight flight = getFlightById(id);
 
-        if (!"IN_PROGRESS".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-                    "Only an active flight can be completed"
-=======
-
+        if (!"IN_PROGRESS".equalsIgnoreCase(flight.getStatus())) {
             throw new IllegalStateException(
                     "Only an in-progress flight can be completed"
->>>>>>> origin/develop
             );
         }
 
         Aircraft aircraft = flight.getAircraft();
 
-        // Maintenance integration will later decide whether
-        // this should remain AVAILABLE or move to MAINTENANCE.
-        aircraft.setStatus("AVAILABLE");
-
-        aircraftRepository.save(aircraft);
+        // Preserve maintenance/out-of-service status if another
+        // module has changed it while the flight was active.
+        if ("IN_FLIGHT".equalsIgnoreCase(aircraft.getStatus())) {
+            aircraft.setStatus("AVAILABLE");
+            aircraftRepository.save(aircraft);
+        }
 
         flight.setStatus("COMPLETED");
         flight.setEndTime(LocalDateTime.now());
@@ -259,47 +168,14 @@ public class FlightService {
 
     @Transactional
     public Flight cancelFlight(Long id) {
-
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-=======
-
+        if (!"SCHEDULED".equalsIgnoreCase(flight.getStatus())) {
             throw new IllegalStateException(
->>>>>>> origin/develop
-                    "Cannot cancel an active flight"
+                    "Only a scheduled flight can be cancelled"
             );
         }
 
-        if ("COMPLETED".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-=======
-
-            throw new IllegalStateException(
->>>>>>> origin/develop
-                    "Cannot cancel a completed flight"
-            );
-        }
-
-<<<<<<< HEAD
-=======
-        if ("CANCELLED".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-
-            throw new IllegalStateException(
-                    "Flight is already cancelled"
-            );
-        }
-
->>>>>>> origin/develop
         flight.setStatus("CANCELLED");
 
         return flightRepository.save(flight);
@@ -307,18 +183,10 @@ public class FlightService {
 
     @Transactional
     public void deleteFlight(Long id) {
-
         Flight flight = getFlightById(id);
 
-        if ("IN_PROGRESS".equalsIgnoreCase(
-                flight.getStatus()
-        )) {
-<<<<<<< HEAD
-            throw new RuntimeException(
-=======
-
+        if ("IN_PROGRESS".equalsIgnoreCase(flight.getStatus())) {
             throw new IllegalStateException(
->>>>>>> origin/develop
                     "Cannot delete an active flight"
             );
         }
@@ -326,115 +194,68 @@ public class FlightService {
         flightRepository.delete(flight);
     }
 
-    // ==========================================
-    // Sprint 2 - Flight History
-    // ==========================================
-
     public List<Flight> getFlightHistory(
             Long aircraftId,
             String status,
             LocalDateTime start,
             LocalDateTime end
     ) {
+        boolean hasStatus = status != null && !status.isBlank();
+        boolean hasDateRange = start != null && end != null;
 
-        // Aircraft + Status + Date Range
-        if (
-                aircraftId != null &&
-                status != null &&
-                !status.isBlank() &&
-                start != null &&
-                end != null
-        ) {
+        if ((start == null) != (end == null)) {
+            throw new IllegalArgumentException(
+                    "Both start and end dates are required for a date range"
+            );
+        }
 
+        if (hasDateRange && start.isAfter(end)) {
+            throw new IllegalArgumentException(
+                    "Start date must not be after end date"
+            );
+        }
+
+        if (aircraftId != null && hasStatus && hasDateRange) {
             return flightRepository
                     .findByAircraftIdAndStatusAndScheduledTimeBetween(
-                            aircraftId,
-                            status,
-                            start,
-                            end
+                            aircraftId, status, start, end
                     );
         }
 
-        // Aircraft + Status
-        if (
-                aircraftId != null &&
-                status != null &&
-                !status.isBlank()
-        ) {
-
-            return flightRepository
-                    .findByAircraftIdAndStatus(
-                            aircraftId,
-                            status
-                    );
+        if (aircraftId != null && hasStatus) {
+            return flightRepository.findByAircraftIdAndStatus(
+                    aircraftId, status
+            );
         }
 
-        // Aircraft + Date Range
-        if (
-                aircraftId != null &&
-                start != null &&
-                end != null
-        ) {
-
+        if (aircraftId != null && hasDateRange) {
             return flightRepository
                     .findByAircraftIdAndScheduledTimeBetween(
-                            aircraftId,
-                            start,
-                            end
+                            aircraftId, start, end
                     );
         }
 
-        // Status + Date Range
-        if (
-                status != null &&
-                !status.isBlank() &&
-                start != null &&
-                end != null
-        ) {
-
+        if (hasStatus && hasDateRange) {
             return flightRepository
                     .findByStatusAndScheduledTimeBetween(
-                            status,
-                            start,
-                            end
+                            status, start, end
                     );
         }
 
-        // Aircraft only
         if (aircraftId != null) {
-
-            return flightRepository
-                    .findByAircraftId(
-                            aircraftId
-                    );
+            return flightRepository.findByAircraftId(aircraftId);
         }
 
-        // Status only
-        if (
-                status != null &&
-                !status.isBlank()
-        ) {
-
-            return flightRepository
-                    .findByStatus(
-                            status
-                    );
+        if (hasStatus) {
+            return flightRepository.findByStatus(status);
         }
 
-        // Date range only
-        if (
-                start != null &&
-                end != null
-        ) {
-
-            return flightRepository
-                    .findByScheduledTimeBetween(
-                            start,
-                            end
-                    );
+        if (hasDateRange) {
+            return flightRepository.findByScheduledTimeBetween(
+                    start, end
+            );
         }
 
-        // No filters
         return flightRepository.findAll();
     }
 }
