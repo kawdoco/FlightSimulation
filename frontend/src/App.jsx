@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+import { useEffect, useRef, useState } from "react";
+=======
+<<<<<<< HEAD
 import {
   useEffect,
   useRef,
@@ -7,6 +10,7 @@ import {
 =======
 import { useEffect, useRef, useState } from "react";
 >>>>>>> origin/develop
+>>>>>>> origin/develop
 
 import {
   BrowserRouter,
@@ -14,6 +18,8 @@ import {
   Route,
 } from "react-router-dom";
 
+<<<<<<< HEAD
+=======
 <<<<<<< HEAD
 import Sidebar from "./components/Sidebar.jsx";
 import FlightSimulator from "./simulator/FlightSimulator.jsx";
@@ -24,6 +30,7 @@ import TelemetryPage from "./pages/TelemetryPage.jsx";
 import FlightHistoryPage from "./pages/FlightHistoryPage.jsx";
 import TelemetryReportPage from "./pages/TelemetryReportPage.jsx";
 =======
+>>>>>>> origin/develop
 import Sidebar from "./components/Sidebar";
 
 import FlightSimulator from "./simulator/FlightSimulator";
@@ -32,6 +39,9 @@ import AircraftPage from "./pages/AircraftPage";
 import FlightPage from "./pages/FlightPage";
 import TelemetryPage from "./pages/TelemetryPage";
 
+<<<<<<< HEAD
+=======
+>>>>>>> origin/develop
 >>>>>>> origin/develop
 import {
   connectTelemetryWebSocket,
@@ -55,6 +65,8 @@ const Dashboard = ({
   setTelemetry,
 }) => {
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
 
   return (
 
@@ -65,10 +77,14 @@ const Dashboard = ({
         <div>
 
 =======
+>>>>>>> origin/develop
   return (
     <>
       <div className="topbar">
         <div>
+<<<<<<< HEAD
+=======
+>>>>>>> origin/develop
 >>>>>>> origin/develop
           <h1>
             Flight Simulation Dashboard
@@ -78,6 +94,8 @@ const Dashboard = ({
             Smart Aircraft Simulation &
             Monitoring System
           </p>
+<<<<<<< HEAD
+=======
 <<<<<<< HEAD
 
         </div>
@@ -92,12 +110,16 @@ const Dashboard = ({
         </div>
 
 =======
+>>>>>>> origin/develop
         </div>
 
         <div className="status">
           <span className="status-dot"></span>
           SYSTEM ONLINE
         </div>
+<<<<<<< HEAD
+=======
+>>>>>>> origin/develop
 >>>>>>> origin/develop
       </div>
 
@@ -105,6 +127,8 @@ const Dashboard = ({
         telemetry={telemetry}
         setTelemetry={setTelemetry}
       />
+<<<<<<< HEAD
+=======
 <<<<<<< HEAD
 
     </>
@@ -168,6 +192,7 @@ function App() {
         );
 
 =======
+>>>>>>> origin/develop
     </>
   );
 };
@@ -198,6 +223,9 @@ function App() {
           ...incomingTelemetry,
           heading: relativeHeading,
         }));
+<<<<<<< HEAD
+=======
+>>>>>>> origin/develop
 >>>>>>> origin/develop
       },
       1
@@ -205,6 +233,8 @@ function App() {
 
     return () => {
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
 
       disconnectTelemetryWebSocket();
 
@@ -225,6 +255,7 @@ function App() {
           <Routes>
 
 =======
+>>>>>>> origin/develop
       disconnectTelemetryWebSocket();
     };
   }, []);
@@ -236,6 +267,9 @@ function App() {
 
         <main className="main-content">
           <Routes>
+<<<<<<< HEAD
+=======
+>>>>>>> origin/develop
 >>>>>>> origin/develop
             <Route
               path="/"
@@ -243,11 +277,15 @@ function App() {
                 <Dashboard
                   telemetry={telemetry}
 <<<<<<< HEAD
+                  setTelemetry={setTelemetry}
+=======
+<<<<<<< HEAD
                   setTelemetry={
                     setTelemetry
                   }
 =======
                   setTelemetry={setTelemetry}
+>>>>>>> origin/develop
 >>>>>>> origin/develop
                 />
               }
@@ -256,16 +294,23 @@ function App() {
             <Route
               path="/aircraft"
 <<<<<<< HEAD
+              element={<AircraftPage />}
+=======
+<<<<<<< HEAD
               element={
                 <AircraftPage />
               }
 =======
               element={<AircraftPage />}
 >>>>>>> origin/develop
+>>>>>>> origin/develop
             />
 
             <Route
               path="/flights"
+<<<<<<< HEAD
+              element={<FlightPage />}
+=======
 <<<<<<< HEAD
               element={
                 <FlightPage />
@@ -273,10 +318,13 @@ function App() {
 =======
               element={<FlightPage />}
 >>>>>>> origin/develop
+>>>>>>> origin/develop
             />
 
             <Route
               path="/telemetry"
+<<<<<<< HEAD
+=======
 <<<<<<< HEAD
               element={
                 <TelemetryPage />
@@ -308,6 +356,7 @@ function App() {
   );
 
 =======
+>>>>>>> origin/develop
               element={<TelemetryPage />}
             />
           </Routes>
@@ -315,6 +364,9 @@ function App() {
       </div>
     </BrowserRouter>
   );
+<<<<<<< HEAD
+=======
+>>>>>>> origin/develop
 >>>>>>> origin/develop
 }
 

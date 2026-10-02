@@ -1,6 +1,10 @@
 import { Client } from "@stomp/stompjs";
 
+<<<<<<< HEAD
+const WS_URL = "ws://localhost:8081/ws";
+=======
 const WS_URL = "ws://localhost:8080/ws";
+>>>>>>> origin/develop
 
 let stompClient = null;
 
