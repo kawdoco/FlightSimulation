@@ -1,26 +1,6 @@
-<<<<<<< HEAD
 import { useEffect, useRef, useState } from "react";
-=======
-<<<<<<< HEAD
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-=======
-import { useEffect, useRef, useState } from "react";
->>>>>>> origin/develop
->>>>>>> origin/develop
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-} from "react-router-dom";
-
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
 import Sidebar from "./components/Sidebar.jsx";
 import FlightSimulator from "./simulator/FlightSimulator.jsx";
 
@@ -29,20 +9,7 @@ import FlightPage from "./pages/FlightPage.jsx";
 import TelemetryPage from "./pages/TelemetryPage.jsx";
 import FlightHistoryPage from "./pages/FlightHistoryPage.jsx";
 import TelemetryReportPage from "./pages/TelemetryReportPage.jsx";
-=======
->>>>>>> origin/develop
-import Sidebar from "./components/Sidebar";
 
-import FlightSimulator from "./simulator/FlightSimulator";
-
-import AircraftPage from "./pages/AircraftPage";
-import FlightPage from "./pages/FlightPage";
-import TelemetryPage from "./pages/TelemetryPage";
-
-<<<<<<< HEAD
-=======
->>>>>>> origin/develop
->>>>>>> origin/develop
 import {
   connectTelemetryWebSocket,
   disconnectTelemetryWebSocket,
@@ -60,202 +27,72 @@ const initialTelemetry = {
   fuel: 100,
 };
 
-const Dashboard = ({
-  telemetry,
-  setTelemetry,
-}) => {
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-
-  return (
-
-    <>
-
-      <div className="topbar">
-
-        <div>
-
-=======
->>>>>>> origin/develop
+function Dashboard({ telemetry, setTelemetry }) {
   return (
     <>
       <div className="topbar">
         <div>
-<<<<<<< HEAD
-=======
->>>>>>> origin/develop
->>>>>>> origin/develop
-          <h1>
-            Flight Simulation Dashboard
-          </h1>
-
-          <p>
-            Smart Aircraft Simulation &
-            Monitoring System
-          </p>
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-
-        </div>
-
-        <div className="status">
-
-          <span className="status-dot">
-          </span>
-
-          SYSTEM ONLINE
-
-        </div>
-
-=======
->>>>>>> origin/develop
+          <h1>Flight Simulation Dashboard</h1>
+          <p>Smart Aircraft Simulation &amp; Monitoring System</p>
         </div>
 
         <div className="status">
           <span className="status-dot"></span>
-          SYSTEM ONLINE
+          Flight Simulator
         </div>
-<<<<<<< HEAD
-=======
->>>>>>> origin/develop
->>>>>>> origin/develop
       </div>
 
       <FlightSimulator
         telemetry={telemetry}
         setTelemetry={setTelemetry}
       />
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-
-    </>
-
-  );
-
-};
-
-function App() {
-
-  const [
-    telemetry,
-    setTelemetry,
-  ] = useState(initialTelemetry);
-
-  const initialHeading =
-    useRef(null);
-
-  useEffect(() => {
-
-    connectTelemetryWebSocket(
-      (incomingTelemetry) => {
-
-        const incomingHeading =
-          Number(
-            incomingTelemetry.heading
-          );
-
-        if (
-          initialHeading.current === null &&
-          Number.isFinite(
-            incomingHeading
-          )
-        ) {
-
-          initialHeading.current =
-            incomingHeading;
-
-        }
-
-        const relativeHeading =
-          Number.isFinite(
-            incomingHeading
-          )
-            ? (
-                incomingHeading -
-                (
-                  initialHeading.current ??
-                  0
-                ) +
-                360
-              ) % 360
-            : 0;
-
-        setTelemetry(
-          (current) => ({
-            ...current,
-            ...incomingTelemetry,
-            heading: relativeHeading,
-          })
-        );
-
-=======
->>>>>>> origin/develop
     </>
   );
-};
+}
 
 function App() {
-  const [telemetry, setTelemetry] =
-    useState(initialTelemetry);
+  const [telemetry, setTelemetry] = useState(initialTelemetry);
+  const [liveTelemetry, setLiveTelemetry] = useState(initialTelemetry);
+  const [hasReceivedTelemetry, setHasReceivedTelemetry] = useState(false);
   const initialHeading = useRef(null);
 
   useEffect(() => {
-    connectTelemetryWebSocket(
-      (incomingTelemetry) => {
-        const incomingHeading = Number(incomingTelemetry.heading);
+    let disposed = false;
 
-        if (
-          initialHeading.current === null &&
-          Number.isFinite(incomingHeading)
-        ) {
-          initialHeading.current = incomingHeading;
-        }
+    connectTelemetryWebSocket((incomingTelemetry) => {
+      if (disposed) return;
 
-        const relativeHeading = Number.isFinite(incomingHeading)
-          ? (incomingHeading - (initialHeading.current ?? 0) + 360) % 360
-          : 0;
+      // Keep the original heading for the telemetry page.
+      setLiveTelemetry((current) => ({
+        ...current,
+        ...incomingTelemetry,
+      }));
+      setHasReceivedTelemetry(true);
 
-        setTelemetry((current) => ({
-          ...current,
-          ...incomingTelemetry,
-          heading: relativeHeading,
-        }));
-<<<<<<< HEAD
-=======
->>>>>>> origin/develop
->>>>>>> origin/develop
-      },
-      1
-    );
+      const incomingHeading = Number(incomingTelemetry.heading);
+
+      if (
+        initialHeading.current === null &&
+        Number.isFinite(incomingHeading)
+      ) {
+        initialHeading.current = incomingHeading;
+      }
+
+      // The simulator uses heading relative to the first reading.
+      setTelemetry((current) => ({
+        ...current,
+        ...incomingTelemetry,
+        heading: Number.isFinite(incomingHeading)
+          ? (
+              (incomingHeading - (initialHeading.current ?? 0)) % 360 +
+              360
+            ) % 360
+          : current.heading,
+      }));
+    }, 1);
 
     return () => {
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-
-      disconnectTelemetryWebSocket();
-
-    };
-
-  }, []);
-
-  return (
-
-    <BrowserRouter>
-
-      <div className="app">
-
-        <Sidebar />
-
-        <main className="main-content">
-
-          <Routes>
-
-=======
->>>>>>> origin/develop
+      disposed = true;
       disconnectTelemetryWebSocket();
     };
   }, []);
@@ -267,107 +104,40 @@ function App() {
 
         <main className="main-content">
           <Routes>
-<<<<<<< HEAD
-=======
->>>>>>> origin/develop
->>>>>>> origin/develop
             <Route
               path="/"
               element={
                 <Dashboard
                   telemetry={telemetry}
-<<<<<<< HEAD
                   setTelemetry={setTelemetry}
-=======
-<<<<<<< HEAD
-                  setTelemetry={
-                    setTelemetry
-                  }
-=======
-                  setTelemetry={setTelemetry}
->>>>>>> origin/develop
->>>>>>> origin/develop
                 />
               }
             />
 
-            <Route
-              path="/aircraft"
-<<<<<<< HEAD
-              element={<AircraftPage />}
-=======
-<<<<<<< HEAD
-              element={
-                <AircraftPage />
-              }
-=======
-              element={<AircraftPage />}
->>>>>>> origin/develop
->>>>>>> origin/develop
-            />
-
-            <Route
-              path="/flights"
-<<<<<<< HEAD
-              element={<FlightPage />}
-=======
-<<<<<<< HEAD
-              element={
-                <FlightPage />
-              }
-=======
-              element={<FlightPage />}
->>>>>>> origin/develop
->>>>>>> origin/develop
-            />
+            <Route path="/aircraft" element={<AircraftPage />} />
+            <Route path="/flights" element={<FlightPage />} />
 
             <Route
               path="/telemetry"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
               element={
-                <TelemetryPage />
+                <TelemetryPage
+                  telemetry={liveTelemetry}
+                  hasReceivedTelemetry={hasReceivedTelemetry}
+                />
               }
             />
 
-            <Route
-              path="/history"
-              element={
-                <FlightHistoryPage />
-              }
-            />
+            <Route path="/history" element={<FlightHistoryPage />} />
 
             <Route
               path="/reports/:flightId"
-              element={
-                <TelemetryReportPage />
-              }
-            />
-
-          </Routes>
-
-        </main>
-
-      </div>
-
-    </BrowserRouter>
-
-  );
-
-=======
->>>>>>> origin/develop
-              element={<TelemetryPage />}
+              element={<TelemetryReportPage />}
             />
           </Routes>
         </main>
       </div>
     </BrowserRouter>
   );
-<<<<<<< HEAD
-=======
->>>>>>> origin/develop
->>>>>>> origin/develop
 }
 
 export default App;

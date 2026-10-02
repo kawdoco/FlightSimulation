@@ -1,10 +1,6 @@
 import axios from "axios";
 
-<<<<<<< HEAD
-const API_URL = "http://localhost:8080/api/aircraft";
-=======
 const API_URL = "http://localhost:8081/api/aircraft";
->>>>>>> origin/develop
 
 export const getAllAircraft = async () => {
   const response = await axios.get(API_URL);
