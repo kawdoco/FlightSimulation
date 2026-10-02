@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Sidebar from "./components/Sidebar.jsx";
 import FlightSimulator from "./simulator/FlightSimulator.jsx";
-
 import AircraftPage from "./pages/AircraftPage.jsx";
 import FlightPage from "./pages/FlightPage.jsx";
 import TelemetryPage from "./pages/TelemetryPage.jsx";
@@ -27,7 +26,12 @@ const initialTelemetry = {
   fuel: 100,
 };
 
-function Dashboard({ telemetry, setTelemetry }) {
+function Dashboard({
+  telemetry,
+  setTelemetry,
+  controlMode,
+  setControlMode,
+}) {
   return (
     <>
       <div className="topbar">
@@ -45,15 +49,22 @@ function Dashboard({ telemetry, setTelemetry }) {
       <FlightSimulator
         telemetry={telemetry}
         setTelemetry={setTelemetry}
+        controlMode={controlMode}
+        setControlMode={setControlMode}
       />
     </>
   );
 }
 
 function App() {
-  const [telemetry, setTelemetry] = useState(initialTelemetry);
-  const [liveTelemetry, setLiveTelemetry] = useState(initialTelemetry);
-  const [hasReceivedTelemetry, setHasReceivedTelemetry] = useState(false);
+  const [keyboardTelemetry, setKeyboardTelemetry] =
+    useState(initialTelemetry);
+  const [liveTelemetry, setLiveTelemetry] =
+    useState(initialTelemetry);
+  const [hasReceivedTelemetry, setHasReceivedTelemetry] =
+    useState(false);
+  const [controlMode, setControlMode] = useState("keyboard");
+
   const initialHeading = useRef(null);
 
   useEffect(() => {
@@ -62,33 +73,20 @@ function App() {
     connectTelemetryWebSocket((incomingTelemetry) => {
       if (disposed) return;
 
-      // Keep the original heading for the telemetry page.
+      const heading = Number(incomingTelemetry.heading);
+
+      if (
+        initialHeading.current === null &&
+        Number.isFinite(heading)
+      ) {
+        initialHeading.current = heading;
+      }
+
       setLiveTelemetry((current) => ({
         ...current,
         ...incomingTelemetry,
       }));
       setHasReceivedTelemetry(true);
-
-      const incomingHeading = Number(incomingTelemetry.heading);
-
-      if (
-        initialHeading.current === null &&
-        Number.isFinite(incomingHeading)
-      ) {
-        initialHeading.current = incomingHeading;
-      }
-
-      // The simulator uses heading relative to the first reading.
-      setTelemetry((current) => ({
-        ...current,
-        ...incomingTelemetry,
-        heading: Number.isFinite(incomingHeading)
-          ? (
-              (incomingHeading - (initialHeading.current ?? 0)) % 360 +
-              360
-            ) % 360
-          : current.heading,
-      }));
     }, 1);
 
     return () => {
@@ -96,6 +94,19 @@ function App() {
       disconnectTelemetryWebSocket();
     };
   }, []);
+
+  const incomingHeading = Number(liveTelemetry.heading);
+  const relativeHeading = Number.isFinite(incomingHeading)
+    ? (
+        (incomingHeading - (initialHeading.current ?? 0)) % 360 +
+        360
+      ) % 360
+    : 0;
+
+  const simulatorTelemetry =
+    controlMode === "iot"
+      ? { ...liveTelemetry, heading: relativeHeading }
+      : keyboardTelemetry;
 
   return (
     <BrowserRouter>
@@ -108,8 +119,10 @@ function App() {
               path="/"
               element={
                 <Dashboard
-                  telemetry={telemetry}
-                  setTelemetry={setTelemetry}
+                  telemetry={simulatorTelemetry}
+                  setTelemetry={setKeyboardTelemetry}
+                  controlMode={controlMode}
+                  setControlMode={setControlMode}
                 />
               }
             />
@@ -127,7 +140,10 @@ function App() {
               }
             />
 
-            <Route path="/history" element={<FlightHistoryPage />} />
+            <Route
+              path="/history"
+              element={<FlightHistoryPage />}
+            />
 
             <Route
               path="/reports/:flightId"

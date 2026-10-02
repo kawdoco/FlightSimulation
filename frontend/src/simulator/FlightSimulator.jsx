@@ -40,93 +40,92 @@ const FlightScene = ({ telemetry }) => {
         telemetry={telemetry}
       />
 
-      <ChaseCamera
-        aircraftRef={aircraftRef}
-      />
+      <ChaseCamera aircraftRef={aircraftRef} />
     </>
   );
 };
 
-const FlightSimulator = ({ telemetry, setTelemetry }) => {
-
-  /*
-   * ========================================
-   * Keyboard Flight Controls
-   * ========================================
-   */
-
+const FlightSimulator = ({
+  telemetry,
+  setTelemetry,
+  controlMode,
+  setControlMode,
+}) => {
   useEffect(() => {
+    if (controlMode !== "keyboard") return;
+
     const handleKeyDown = (event) => {
+      const target = event.target;
+
+      // Allow normal typing and interaction with form controls.
       if (
-        event.key === "ArrowUp" ||
-        event.key === "ArrowDown"
+        target instanceof HTMLElement &&
+        (
+          target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(
+            target.tagName
+          )
+        )
       ) {
-        event.preventDefault();
+        return;
       }
+
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      const controlKeys = [
+        "w",
+        "s",
+        "a",
+        "d",
+        "q",
+        "e",
+        "arrowup",
+        "arrowdown",
+        "r",
+      ];
+
+      if (!controlKeys.includes(key)) return;
+
+      event.preventDefault();
 
       setTelemetry((current) => {
         const updated = { ...current };
 
-        switch (
-          event.key.toLowerCase()
-        ) {
+        switch (key) {
           case "w":
-            updated.pitch = Math.min(
-              current.pitch + 2,
-              25
-            );
+            updated.pitch = Math.min(current.pitch + 2, 25);
             break;
 
           case "s":
-            updated.pitch = Math.max(
-              current.pitch - 2,
-              -20
-            );
+            updated.pitch = Math.max(current.pitch - 2, -20);
             break;
 
           case "a":
-            updated.roll = Math.max(
-              current.roll - 3,
-              -40
-            );
+            updated.roll = Math.max(current.roll - 3, -40);
             break;
 
           case "d":
-            updated.roll = Math.min(
-              current.roll + 3,
-              40
-            );
+            updated.roll = Math.min(current.roll + 3, 40);
             break;
 
           case "q":
-            updated.heading =
-              (
-                current.heading -
-                3 +
-                360
-              ) % 360;
+            updated.heading = (current.heading - 3 + 360) % 360;
             break;
 
           case "e":
-            updated.heading =
-              (
-                current.heading +
-                3
-              ) % 360;
+            updated.heading = (current.heading + 3) % 360;
             break;
 
           case "arrowup":
-            updated.throttle = Math.min(
-              current.throttle + 5,
-              100
-            );
+            updated.throttle = Math.min(current.throttle + 5, 100);
             break;
 
           case "arrowdown":
-            updated.throttle = Math.max(
-              current.throttle - 5,
-              0
-            );
+            updated.throttle = Math.max(current.throttle - 5, 0);
             break;
 
           case "r":
@@ -142,85 +141,60 @@ const FlightSimulator = ({ telemetry, setTelemetry }) => {
       });
     };
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [controlMode, setTelemetry]);
 
   return (
     <>
       <section className="simulator-card">
-
         <div className="simulator-header">
-
           <div>
-            <h2>
-              Live Flight Simulator
-            </h2>
+            <h2>Live Flight Simulator</h2>
 
             <p>
-              W/S Pitch · A/D Roll ·
-              Q/E Heading · ↑/↓ Throttle ·
-              R Level Aircraft
+              {controlMode === "keyboard"
+                ? "W/S Pitch · A/D Roll · Q/E Heading · ↑/↓ Throttle · R Level Aircraft"
+                : "Aircraft controls follow incoming backend telemetry."}
             </p>
           </div>
 
-          <span className="live-badge">
-            ● LIVE
-          </span>
-
+          <label htmlFor="control-mode">
+            Control Mode{" "}
+            <select
+              id="control-mode"
+              value={controlMode}
+              onChange={(event) =>
+                setControlMode(event.target.value)
+              }
+            >
+              <option value="keyboard">Keyboard</option>
+              <option value="iot">IoT / ESP32</option>
+            </select>
+          </label>
         </div>
 
         <div className="canvas-wrapper">
-
           <Canvas
             shadows
             camera={{
-              position: [
-                0,
-                5,
-                15,
-              ],
-
+              position: [0, 5, 15],
               fov: 55,
-
               near: 0.1,
-
               far: 2000,
             }}
           >
-
-            <FlightScene
-              telemetry={
-                telemetry
-              }
-            />
-
+            <FlightScene telemetry={telemetry} />
           </Canvas>
 
-          <FlightHUD
-            telemetry={
-              telemetry
-            }
-          />
-
+          <FlightHUD telemetry={telemetry} />
         </div>
-
       </section>
 
-      <TelemetryPanel
-        telemetry={
-          telemetry
-        }
-      />
+      <TelemetryPanel telemetry={telemetry} />
     </>
   );
 };
