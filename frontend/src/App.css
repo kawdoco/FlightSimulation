@@ -1185,3 +1185,220 @@ button {
   color: #aab5c5;
 }
 }
+/* Flight History and Telemetry Reports */
+.main-content {
+  min-width: 0;
+}
+
+.page-container {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.page-container > h1 {
+  margin: 24px 0 12px;
+  font-size: 28px;
+}
+
+.page-container > h2 {
+  margin: 24px 0 16px;
+  font-size: 21px;
+}
+
+.page-container > p {
+  color: #aab5c5;
+  line-height: 1.6;
+}
+
+/* History filters */
+.page-container .history-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding: 22px;
+  margin-bottom: 24px;
+  background: #0e1a2b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.page-container .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.page-container .filter-group label {
+  color: #aab5c5;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.page-container .filter-group input,
+.page-container .filter-group select {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  background: #091525;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  color-scheme: dark;
+}
+
+.page-container .filter-group input:focus,
+.page-container .filter-group select:focus {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.page-container .filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Buttons */
+.page-container button {
+  padding: 10px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.page-container button:hover {
+  background: #1d4ed8;
+}
+
+.page-container button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+.page-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-container .filter-actions button:last-child,
+.page-container > button:first-child {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.page-container .filter-actions button:last-child:hover,
+.page-container > button:first-child:hover {
+  background: #29384e;
+}
+
+/* Report summary */
+.page-container .summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.page-container .summary-card {
+  padding: 22px;
+  background: #0e1a2b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.page-container .summary-card h3 {
+  margin: 0 0 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.page-container .summary-card p {
+  margin: 0;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* History and report tables */
+.page-container .table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 18px;
+  background: #0e1a2b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.page-container .table-wrapper table {
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+}
+
+.page-container .table-wrapper th {
+  padding: 16px;
+  background: #111f33;
+  color: #94a3b8;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.page-container .table-wrapper td {
+  padding: 16px;
+  color: #dbe4f0;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.page-container .table-wrapper tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.page-container .table-wrapper tbody tr:hover {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+/* Responsive layout */
+@media (max-width: 1100px) {
+  .page-container .history-filters,
+  .page-container .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .page-container .history-filters,
+  .page-container .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-container .history-filters {
+    padding: 16px;
+  }
+
+  .page-container .summary-card {
+    padding: 18px;
+  }
+
+  .page-container > h1 {
+    font-size: 25px;
+  }
+}
