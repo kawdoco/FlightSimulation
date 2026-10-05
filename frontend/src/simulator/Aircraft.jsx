@@ -8,11 +8,13 @@ import {
 } from "react";
 import * as THREE from "three";
 
-const Aircraft = forwardRef(({ telemetry }, ref) => {
+const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
   const aircraftRef = useRef();
   const { scene } = useGLTF("/models/aircraft.glb");
 
   useEffect(() => {
+    const aircraftColor = new THREE.Color("#64748b");
+
     scene.traverse((object) => {
       if (!object.isMesh) return;
 
@@ -24,10 +26,20 @@ const Aircraft = forwardRef(({ telemetry }, ref) => {
         : [object.material];
 
       materials.forEach((material) => {
+        if (!material) return;
+
         material.transparent = false;
         material.opacity = 1;
         material.depthWrite = true;
-        material.color?.lerp(new THREE.Color("#64748b"), 0.35);
+
+        // Avoid repeatedly changing the color during effect reruns.
+        if (
+          material.color &&
+          !material.userData.aircraftColorApplied
+        ) {
+          material.color.lerp(aircraftColor, 0.35);
+          material.userData.aircraftColorApplied = true;
+        }
       });
     });
   }, [scene]);
@@ -39,70 +51,95 @@ const Aircraft = forwardRef(({ telemetry }, ref) => {
 
     const aircraft = aircraftRef.current;
 
-    const pitch =
-      (telemetry.pitch * Math.PI) / 180;
+    const numeric = (value) => {
+      const result = Number(value);
+      return Number.isFinite(result) ? result : 0;
+    };
 
-    const visualRoll = THREE.MathUtils.clamp(
-      Number(telemetry.roll) || 0,
+    const speed = Math.max(0, numeric(telemetry.speed));
+
+    const pitchDegrees = THREE.MathUtils.clamp(
+      numeric(telemetry.pitch),
+      -30,
+      30
+    );
+
+    const rollDegrees = THREE.MathUtils.clamp(
+      numeric(telemetry.roll),
       -45,
       45
     );
 
-    const roll =
-      (-visualRoll * Math.PI) / 180;
-
-    const heading =
-      (-telemetry.heading * Math.PI) / 180;
-
-    // Smooth pitch
-    aircraft.rotation.x +=
-      (pitch - aircraft.rotation.x) * 0.05;
-
-    // Smooth roll
-    aircraft.rotation.z +=
-      (roll - aircraft.rotation.z) * 0.05;
-
-    // Heading
-    aircraft.rotation.y = heading;
-
-    // Throttle speed or upward MPU pitch can start forward movement.
-    const pitchInput = Math.max(0, Number(telemetry.pitch) || 0);
-    const movementRate = Math.max(
-      Number(telemetry.speed) || 0,
-      pitchInput * 8
+    const targetPitch = THREE.MathUtils.degToRad(
+      pitchDegrees
     );
-    const forwardSpeed =
-      -(movementRate / 25) * delta;
 
-    if (pitchInput > 2 || telemetry.speed > 1) {
-      aircraft.translateZ(forwardSpeed);
-    }
+    const targetRoll = THREE.MathUtils.degToRad(
+      -rollDegrees
+    );
 
-    // Simple takeoff / descent
-    if (telemetry.speed > 120) {
+    const targetHeading = THREE.MathUtils.degToRad(
+      -numeric(telemetry.heading)
+    );
+
+    // Limit movement jumps after switching browser tabs.
+    const frameDelta = Math.min(delta, 0.1);
+
+    // Smooth rotation consistently across different frame rates.
+    const smoothing = 1 - Math.exp(-10 * frameDelta);
+
+    aircraft.rotation.x = THREE.MathUtils.lerp(
+      aircraft.rotation.x,
+      targetPitch,
+      smoothing
+    );
+
+    aircraft.rotation.z = THREE.MathUtils.lerp(
+      aircraft.rotation.z,
+      targetRoll,
+      smoothing
+    );
+
+    // Use the shortest turn when heading crosses 0° / 360°.
+    const headingDifference = Math.atan2(
+      Math.sin(targetHeading - aircraft.rotation.y),
+      Math.cos(targetHeading - aircraft.rotation.y)
+    );
+
+    aircraft.rotation.y += headingDifference * smoothing;
+
+    // Forward movement follows speed and heading.
+    const distance = (speed / 25) * frameDelta;
+
+    aircraft.position.x -=
+      Math.sin(aircraft.rotation.y) * distance;
+
+    aircraft.position.z -=
+      Math.cos(aircraft.rotation.y) * distance;
+
+    // Ignore small pitch fluctuations around level.
+    const climbPitch =
+      Math.abs(pitchDegrees) < 1 ? 0 : pitchDegrees;
+
+    // Simple demo takeoff, climb, and descent.
+    if (speed > 120 || aircraft.position.y > 1.1) {
       aircraft.position.y +=
-        telemetry.pitch * 0.025 * delta;
+        climbPitch * 0.5 * frameDelta;
     }
 
-    // Keep the aircraft body just above the runway surface.
-    if (aircraft.position.y < 1.1) {
-      aircraft.position.y = 1.1;
-    }
+    // Keep the aircraft above the runway.
+    aircraft.position.y = Math.max(
+      1.1,
+      aircraft.position.y
+    );
   });
 
   return (
-    <group
-      ref={aircraftRef}
-      position={[0, 1.1, 0]}
-    >
+    <group ref={aircraftRef} position={[0, 1.1, 0]}>
       <primitive
         object={scene}
         scale={0.003}
-        rotation={[
-          -Math.PI / 2,
-          0,
-          Math.PI / 2,
-        ]}
+        rotation={[-Math.PI / 2, 0, Math.PI / 2]}
       />
     </group>
   );
