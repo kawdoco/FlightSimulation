@@ -2,13 +2,10 @@ import { NavLink } from "react-router-dom";
 
 const Sidebar = () => {
   const getLinkClass = ({ isActive }) =>
-    isActive
-      ? "sidebar-link active"
-      : "sidebar-link";
+    isActive ? "sidebar-link active" : "sidebar-link";
 
   return (
     <aside className="sidebar">
-
       {/* Logo */}
       <div className="logo">
         <h2>✈ AeroSim</h2>
@@ -17,63 +14,44 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav>
-
-        <NavLink
-          to="/"
-          end
-          className={getLinkClass}
-        >
+        <NavLink to="/" end className={getLinkClass}>
           Dashboard
         </NavLink>
 
-        <NavLink
-          to="/aircraft"
-          className={getLinkClass}
-        >
+        <NavLink to="/aircraft" className={getLinkClass}>
           Aircraft
         </NavLink>
 
-        <NavLink
-          to="/flights"
-          className={getLinkClass}
-        >
+        <NavLink to="/flights" className={getLinkClass}>
           Flights
         </NavLink>
 
-        <NavLink
-          to="/"
-          end
-          className={getLinkClass}
-        >
+        <NavLink to="/" end className={getLinkClass}>
           Simulator
         </NavLink>
 
-        <NavLink
-          to="/telemetry"
-          className={getLinkClass}
-        >
+        <NavLink to="/telemetry" className={getLinkClass}>
           Telemetry
         </NavLink>
 
-        {/* Future Module */}
-        <span className="sidebar-link disabled-link">
-          Maintenance
-        </span>
+        <NavLink to="/history" className={getLinkClass}>
+          Flight Reports
+        </NavLink>
 
-        {/* Future Module */}
-        <span className="sidebar-link disabled-link">
-          IoT Devices
-        </span>
+        {/* Future modules */}
+        <NavLink to="/maintenance" className={getLinkClass}>
+  Maintenance
+</NavLink>
 
+<NavLink to="/iot-devices" className={getLinkClass}>
+  IoT Devices
+</NavLink>
       </nav>
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <small>
-          FlightSimulation Team
-        </small>
+        <small>FlightSimulation Team</small>
       </div>
-
     </aside>
   );
 };

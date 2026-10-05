@@ -8,6 +8,8 @@ import FlightPage from "./pages/FlightPage.jsx";
 import TelemetryPage from "./pages/TelemetryPage.jsx";
 import FlightHistoryPage from "./pages/FlightHistoryPage.jsx";
 import TelemetryReportPage from "./pages/TelemetryReportPage.jsx";
+import MaintenancePage from "./pages/MaintenancePage.jsx";
+import IoTDevicesPage from "./pages/IoTDevicesPage.jsx";
 
 import {
   connectTelemetryWebSocket,
@@ -139,7 +141,7 @@ function App() {
                 />
               }
             />
-
+           
             <Route
               path="/history"
               element={<FlightHistoryPage />}
@@ -149,6 +151,20 @@ function App() {
               path="/reports/:flightId"
               element={<TelemetryReportPage />}
             />
+            <Route
+  path="/maintenance"
+  element={<MaintenancePage />}
+/>
+
+<Route
+  path="/iot-devices"
+  element={
+    <IoTDevicesPage
+      telemetry={liveTelemetry}
+      hasReceivedTelemetry={hasReceivedTelemetry}
+    />
+  }
+/>
           </Routes>
         </main>
       </div>
