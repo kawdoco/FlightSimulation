@@ -6,16 +6,19 @@ const ChaseCamera = ({ aircraftRef }) => {
 
   const cameraTarget = new THREE.Vector3();
   const lookTarget = new THREE.Vector3();
+  const headingRotation = new THREE.Quaternion();
+  const worldUp = new THREE.Vector3(0, 1, 0);
 
   useFrame(() => {
     if (!aircraftRef.current) return;
 
     const aircraft = aircraftRef.current;
 
-    // Camera behind aircraft
+    // Follow heading while keeping the camera above the runway during pitch/roll.
+    headingRotation.setFromAxisAngle(worldUp, aircraft.rotation.y);
     cameraTarget.set(0, 5, 14);
     cameraTarget.applyQuaternion(
-      aircraft.quaternion
+      headingRotation
     );
     cameraTarget.add(aircraft.position);
 
@@ -27,7 +30,7 @@ const ChaseCamera = ({ aircraftRef }) => {
     // Look in front of aircraft
     lookTarget.set(0, 1, -10);
     lookTarget.applyQuaternion(
-      aircraft.quaternion
+      headingRotation
     );
     lookTarget.add(aircraft.position);
 

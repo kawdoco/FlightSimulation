@@ -18,6 +18,11 @@ import {
 
 import "./App.css";
 
+const configuredFlightId = Number(import.meta.env.VITE_TELEMETRY_FLIGHT_ID ?? 1);
+const telemetryFlightId = Number.isSafeInteger(configuredFlightId) && configuredFlightId > 0
+  ? configuredFlightId
+  : 1;
+
 const initialTelemetry = {
   altitude: 0,
   speed: 0,
@@ -89,7 +94,7 @@ function App() {
         ...incomingTelemetry,
       }));
       setHasReceivedTelemetry(true);
-    }, 1);
+    }, telemetryFlightId);
 
     return () => {
       disposed = true;

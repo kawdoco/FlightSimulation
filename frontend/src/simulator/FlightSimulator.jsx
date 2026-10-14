@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import Aircraft from "./Aircraft";
 import Runway from "./Runway";
 import ChaseCamera from "./ChaseCamera";
+import { advanceSpeed } from "./speedDynamics";
 
 import TelemetryPanel from "../components/TelemetryPanel";
 import FlightHUD from "../components/FlightHUD";
@@ -14,6 +15,7 @@ const FlightScene = ({ telemetry }) => {
 
   return (
     <>
+      <color attach="background" args={["#9bbbd2"]} />
       <ambientLight intensity={1.2} />
 
       <hemisphereLight
@@ -29,7 +31,7 @@ const FlightScene = ({ telemetry }) => {
       />
 
       <Sky
-        distance={450000}
+        distance={1000}
         sunPosition={[10, 5, 10]}
       />
 
@@ -51,6 +53,24 @@ const FlightSimulator = ({
   controlMode,
   setControlMode,
 }) => {
+  useEffect(() => {
+    if (controlMode !== "keyboard") return;
+
+    let previousTime = performance.now();
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      const elapsedSeconds = (now - previousTime) / 1000;
+      previousTime = now;
+
+      setTelemetry((current) => {
+        const speed = advanceSpeed(current.speed, current.throttle, elapsedSeconds);
+        return speed === current.speed ? current : { ...current, speed };
+      });
+    }, 100);
+
+    return () => window.clearInterval(timer);
+  }, [controlMode, setTelemetry]);
+
   useEffect(() => {
     if (controlMode !== "keyboard") return;
 
