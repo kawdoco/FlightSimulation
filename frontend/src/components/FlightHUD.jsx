@@ -1,95 +1,23 @@
-const FlightHUD = ({ telemetry }) => {
+export default function FlightHUD({ telemetry, controlMode }) {
+  const format = (value, decimals = 0) => (Number(value) || 0).toFixed(decimals);
   const warnings = [];
-  const visualRoll = Math.max(
-    -45,
-    Math.min(45, Number(telemetry.roll) || 0)
-  );
-
-  if (
-    telemetry.speed > 0 &&
-    telemetry.speed < 100 &&
-    telemetry.altitude > 100
-  ) {
-    warnings.push("STALL WARNING");
-  }
-
-  if (telemetry.speed > 280) {
-    warnings.push("OVERSPEED");
-  }
-
-  if (telemetry.fuel < 20) {
-    warnings.push("LOW FUEL");
-  }
-
-  if (telemetry.pitch > 20) {
-    warnings.push("HIGH PITCH");
-  }
-
-  return (
-    <div className="flight-hud">
-      <div className="hud-left">
-        <div>
-          ALT
-          <strong>
-            {telemetry.altitude.toFixed(0)}
-          </strong>
-        </div>
-
-        <div>
-          SPD
-          <strong>
-            {telemetry.speed.toFixed(0)}
-          </strong>
-        </div>
-      </div>
-
-      <div className="hud-center">
-        <div className="crosshair">
-          <span></span>
-          <span></span>
-        </div>
-
-        <div className="hud-heading">
-          HDG {telemetry.heading.toFixed(0)}°
-        </div>
-
-        <div className="hud-attitude">
-          PITCH {telemetry.pitch.toFixed(1)}°
-          &nbsp; | &nbsp;
-          ROLL {visualRoll.toFixed(1)}°
-        </div>
-      </div>
-
-      <div className="hud-right">
-        <div>
-          THR
-          <strong>
-            {telemetry.throttle.toFixed(0)}%
-          </strong>
-        </div>
-
-        <div>
-          FUEL
-          <strong>
-            {telemetry.fuel.toFixed(1)}%
-          </strong>
-        </div>
-      </div>
-
-      {warnings.length > 0 && (
-        <div className="warning-panel">
-          {warnings.map((warning) => (
-            <div
-              key={warning}
-              className="flight-warning"
-            >
-              ⚠ {warning}
-            </div>
-          ))}
-        </div>
-      )}
+  if (telemetry.speed > 0 && telemetry.speed < 100 && telemetry.altitude > 100) warnings.push('STALL WARNING');
+  if (telemetry.speed > 280) warnings.push('OVERSPEED');
+  if (telemetry.fuel < 20) warnings.push('LOW FUEL');
+  if (telemetry.pitch > 20) warnings.push('HIGH PITCH');
+  const roll = Math.max(-45, Math.min(45, Number(telemetry.roll) || 0));
+  return <div className="flight-hud">
+    <div className="instrument-bar" aria-label="Flight instruments">
+      {[
+        ['Altitude', `${format(telemetry.altitude)} ft`],
+        ['Airspeed', `${format(telemetry.speed)} km/h`],
+        ['Heading', `${format(telemetry.heading).padStart(3, '0')}°`],
+        ['Throttle', `${format(telemetry.throttle)}%`],
+        ['Fuel', `${format(telemetry.fuel)}%`],
+      ].map(([label, value]) => <div className="instrument-reading" key={label}><span>{label.toUpperCase()}</span><strong>{value}</strong></div>)}
     </div>
-  );
-};
-
-export default FlightHUD;
+    <div className="hud-center"><div className="crosshair"><span /><span /></div><div className="hud-attitude"><span>PITCH {format(telemetry.pitch, 1)}°</span><span>ROLL {roll.toFixed(1)}°</span></div></div>
+    <div className="viewport-mode">{controlMode === 'keyboard' ? 'KEYBOARD CONTROL' : 'IoT / ESP32 CONTROL'}</div>
+    {warnings.length > 0 && <div className="warning-panel" role="status">{warnings.map(warning => <div key={warning} className="flight-warning">⚠ {warning}</div>)}</div>}
+  </div>;
+}

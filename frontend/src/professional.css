@@ -1,0 +1,152 @@
+/* Refined aviation workspace. App.css supplies shared layout and interactions. */
+:root { background: #111923; color: #e7edf3; --surface: #1a2734; --border: #334350; --muted: #a5b4c6; --accent: #7bd8ec; }
+body { font-size: 14px; }
+.sidebar { width: 208px; background: #141f2b; border-color: #2c3947; padding: 26px 14px 20px; }
+.logo { padding: 0 12px 30px; }
+.logo h2 { flex-direction: column; align-items: flex-start; gap: 10px; font-size: 24px; font-weight: 500; letter-spacing: -.5px; }
+.logo .icon { color: #a3bad0; margin-left: 26px; }
+.logo span { margin: 7px 0 0; font-size: 9px; text-transform: uppercase; letter-spacing: 1.7px; color: #9badc4; }
+.sidebar nav { gap: 6px; margin-top: 7px; }
+.sidebar-link { padding: 13px 11px; border-radius: 4px; color: #b9c6d8; font-size: 13px; }
+.sidebar-link.active { background: #23313e; border-color: transparent; font-weight: 500; }
+.sidebar-link.active .icon { color: #e7edf3; }
+.sidebar-link:hover { background: #202e3a; }
+.sidebar-link.active:before { top: 0; bottom: 0; border-radius: 2px; width: 2px; }
+.sidebar-footer { border-top: 1px solid #334350; margin-top: auto; padding-top: 17px; font-size: 11px; }
+.main-content { width: calc(100% - 208px); padding: 24px 28px; }
+.workspace-breadcrumb { font: 10px/1.5 Consolas, monospace; text-transform: uppercase; color: #98aac1; letter-spacing: 1.1px; margin: 0 0 9px; display: flex; gap: 15px; }
+h1 { font-size: clamp(24px, 2.1vw, 31px); font-weight: 600; letter-spacing: -.5px; }
+h2 { font-size: 17px; font-weight: 600; }
+.topbar, .page-header { margin-bottom: 22px; }
+.topbar p, .page-header p { font-size: 13px; color: #b0bdcd; }
+.status, .aircraft-count, .connection-status { border-radius: 4px; background: #18232e; padding: 8px 11px; font-size: 11px; }
+.aircraft-count { color: #c1d0df; }
+.management-card, .history-filters, .report-banner, .empty-state, .notice-card, .raw-telemetry { border-radius: 4px; padding: 20px; }
+.management-card-header { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid #334350; }
+.management-card-header h2 { font-size: 17px; }
+input, select, textarea { border-color: #455765; border-radius: 3px; background: #15232f; font-size: 12px; padding: 10px 11px; }
+.form-group label, .filter-group label { color: #c1cbd7; font-size: 11px; }
+.form-group, .filter-group { gap: 6px; }
+.primary-btn, .secondary-btn, .page-container button, .edit-btn, .delete-btn, .start-btn, .cancel-btn, .complete-btn, .level-button { border-radius: 3px; background: #172532; border-color: #566a7a; color: #e0e9f2; font-size: 11px; font-weight: 500; padding: 9px 12px; }
+.primary-btn, .page-container .filter-actions button:first-child, .page-container .export-button { color: #09212a; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.primary-btn:hover, .page-container .filter-actions button:first-child:hover, .page-container .export-button:hover { background: #abe8f6; border-color: #abe8f6; }
+.delete-btn, .cancel-btn { color: #e4b0b7; border-color: #67505a; }
+.start-btn, .complete-btn { color: #a7e3d7; border-color: #517570; }
+.table-wrapper { border-radius: 3px; }
+th { background: #1c2c3a; color: #b6c9dc; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; padding: 13px; }
+td { border-bottom-color: #334350; padding: 16px 13px; font-size: 12px; }
+tbody tr:hover { background: #21313f; }
+.aircraft-table { min-width: 570px; }
+.table-actions { flex-wrap: nowrap; }
+.table-actions button { padding: 6px 9px; font-size: 10px; }
+.row-details { display: block; font-size: 10px; line-height: 1.7; margin-top: 5px; color: #a5b4c6; }
+.aircraft-status { border-radius: 3px; font-size: 9px; font-weight: 500; padding: 4px 7px; }
+.aircraft-status.available, .aircraft-status.completed { background: #293f35; color: #c2e3ce; border-color: #54775d; }
+.aircraft-status.scheduled, .aircraft-status.in-progress, .aircraft-status.in-flight { background: #2d3b4b; color: #c6d9eb; border-color: #566b7c; }
+.aircraft-status.maintenance { background: #463c29; color: #e8d4a4; border-color: #7b6841; }
+.aircraft-status.cancelled, .aircraft-status.out-of-service { background: #3c2d36; color: #e5b8c0; border-color: #735362; }
+.history-table { min-width: 600px; }
+.history-filters { gap: 14px; }
+.summary-grid { gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 14px 0; }
+.summary-card { border: 0; border-right: 1px solid #40515f; border-radius: 0; padding: 5px 17px; }
+.summary-card:last-child { border-right: 0; }
+.summary-card h3 { margin-bottom: 10px; font-size: 10px; }
+.summary-card p { font-size: 20px; font-weight: 500; }
+.report-banner h2 { font-size: 19px; }
+.telemetry-grid { gap: 10px; }
+.telemetry-card { border-radius: 3px; padding: 22px 18px; }
+.telemetry-card .icon { color: #c5d5e7; }
+.telemetry-card span { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #b0c2d7; }
+.telemetry-card strong { color: #f1f5f9; font-size: 24px; font-weight: 500; }
+.telemetry-page .telemetry-card { min-height: 160px; gap: 20px; }
+.telemetry-page .telemetry-card strong { font-size: 32px; }
+.simulator-card { border-radius: 4px; border: 0; background: transparent; }
+.simulator-header { padding: 13px 0 16px; border-top: 1px solid #334350; gap: 14px; }
+.simulator-mode { gap: 20px; }
+.simulator-mode > span { font: 10px Consolas, monospace; font-weight: 400; text-transform: uppercase; letter-spacing: 1px; color: #a5b8ce; }
+.mode-switch { border-radius: 3px; border-color: #526677; }
+.mode-switch button { padding: 10px 18px; font-size: 12px; border: 0; border-radius: 0; }
+.mode-switch button[aria-pressed="true"] { color: #09232b; background: #7bd8ec; border: 0; border-radius: 0; }
+.mode-switch button[aria-pressed="true"] .icon { color: #09232b; }
+.mode-switch button:hover { background: #2e4050; }
+.mode-switch button[aria-pressed="true"]:hover { background: #abe8f6; }
+.level-button { padding: 8px 12px; }
+.level-button kbd { margin-left: 7px; }
+kbd { border-radius: 3px; font-size: 11px; min-width: 27px; height: 28px; background: #192735; border-color: #667b8e; }
+.canvas-wrapper { border-radius: 4px; height: clamp(360px, 42vw, 570px); }
+.controls-strip { border-radius: 0; border: 0; border-block: 1px solid #334350; background: transparent; padding: 14px 18px; margin: 13px 0 0; }
+.control-hint { font-size: 11px; }
+.simulator-metrics { background: transparent; border-bottom: 1px solid #334350; gap: 0; margin: 0; padding: 23px 0; }
+.simulator-metrics .telemetry-card { border: 0; border-right: 1px solid #40515f; border-radius: 0; background: transparent; padding: 0 22px; }
+.simulator-metrics .telemetry-card:last-child { border-right: 0; }
+.simulator-metrics .icon { display: none; }
+.simulator-metrics .telemetry-card span { text-transform: none; letter-spacing: 0; font-size: 12px; margin-bottom: 8px; }
+.simulator-metrics .telemetry-card strong { font-size: 22px; }
+.flight-hud { display: block; padding: 0; color: #fff; }
+.instrument-bar { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #172d44b8; border: 1px solid #c1d0df30; border-radius: 4px; padding: 13px 0; }
+.instrument-reading { text-align: center; border-right: 1px solid #c1d0df50; padding: 0 8px; }
+.instrument-reading:last-child { border-right: 0; }
+.instrument-reading span { display: block; font: 9px/1.4 Consolas, monospace; letter-spacing: .5px; color: #d1dfed; margin-bottom: 8px; }
+.instrument-reading strong { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud-center { top: 29%; color: #f6fbff; text-shadow: 0 1px 2px #345; }
+.crosshair { width: 110px; height: 55px; }
+.crosshair span:first-child { width: 110px; height: 1px; top: 32px; background: #edf7ff; }
+.crosshair span:last-child { width: 1px; height: 55px; left: 54px; top: 0; background: #edf7ff; }
+.hud-attitude { display: flex; flex-direction: column; position: absolute; top: 5px; left: 125px; gap: 5px; font: 10px Consolas, monospace; margin: 0; text-align: left; }
+.viewport-mode { position: absolute; bottom: 12px; left: 16px; font: 9px Consolas, monospace; color: #ebf4ff; letter-spacing: .5px; background: #172d4499; padding: 5px 7px; border-radius: 2px; }
+.warning-panel { top: auto; bottom: 16px; }
+.flight-warning { border-radius: 3px; background: #702a34eb; font-size: 11px; }
+.iot-metrics { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.iot-metrics .telemetry-card { flex-direction: column; align-items: flex-start; padding: 17px 12px; gap: 14px; }
+.iot-metrics .telemetry-card strong { font-size: 19px; }
+.connection-status { background: #382f1f; color: #e8cf92; border-color: #806d40; }
+.connection-status.connected { background: #293f35; color: #c2e3ce; border-color: #54775d; }
+.notice-card .icon { color: #b9d7ed; }
+.raw-telemetry { background: #15212d; }
+.raw-telemetry pre { color: #d5deea; }
+.back-link { color: #b8dfef; }
+@media (min-width: 1200px) {
+  .aircraft-page, .flight-page { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 0 20px; }
+  .aircraft-page > .page-header, .flight-page > .page-header, .aircraft-page > .success-message, .aircraft-page > .error-message, .flight-page > .success-message, .flight-page > .error-message { grid-column: 1 / -1; }
+  .aircraft-page > .management-card, .flight-page > .management-card { align-self: start; }
+  .aircraft-page .aircraft-form, .flight-page .aircraft-form { grid-template-columns: 1fr; gap: 13px; }
+  .aircraft-page .form-actions, .flight-page .form-actions { flex-direction: column; }
+}
+@media (max-width: 1150px) {
+  .main-content { width: calc(100% - 208px); padding: 22px; }
+  .summary-card { border-right: 0; }
+  .iot-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  .sidebar { width: 172px; padding-inline: 9px; }
+  .main-content { width: calc(100% - 172px); padding: 18px; }
+  .sidebar-link { padding-inline: 9px; font-size: 12px; }
+  .instrument-reading strong { font-size: 13px; }
+  .instrument-reading span { font-size: 8px; }
+  .simulator-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 0; }
+  .simulator-metrics .telemetry-card:nth-child(2) { border-right: 0; }
+  .canvas-wrapper { height: 400px; }
+}
+@media (max-width: 600px) {
+  .sidebar { width: 100%; padding: 14px; }
+  .logo { padding: 0 6px 12px; }
+  .logo h2 { flex-direction: row; font-size: 21px; gap: 10px; }
+  .logo .icon { width: 29px; height: 29px; margin: 0; }
+  .main-content { width: 100%; padding: 18px 14px; }
+  .sidebar-link.active:before { top: auto; bottom: -1px; width: auto; height: 2px; }
+  .simulator-mode { gap: 10px; justify-content: flex-start; }
+  .simulator-mode > span { width: 100%; font-size: 9px; }
+  .mode-switch button { padding: 9px 14px; }
+  .canvas-wrapper { height: 390px; }
+  .instrument-bar { top: 10px; width: calc(100% - 20px); padding: 11px 0; }
+  .instrument-reading { padding: 0 2px; }
+  .instrument-reading span { font-size: 7px; letter-spacing: 0; }
+  .instrument-reading strong { font-size: 11px; }
+  .hud-attitude { left: 90px; font-size: 9px; }
+  .crosshair { width: 80px; }
+  .crosshair span:first-child { width: 80px; }
+  .crosshair span:last-child { left: 39px; }
+  .summary-grid { gap: 18px 0; }
+  .iot-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .simulator-metrics .telemetry-card { padding: 0 16px; }
+}

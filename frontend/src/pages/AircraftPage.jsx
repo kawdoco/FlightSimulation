@@ -357,14 +357,10 @@ function AircraftPage() {
             <table className="aircraft-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Registration</th>
                   <th>Model</th>
                   <th>Manufacturer</th>
                   <th>Status</th>
-                  <th>Fuel Capacity</th>
-                  <th>Max Speed</th>
-                  <th>Max Altitude</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -372,9 +368,8 @@ function AircraftPage() {
               <tbody>
                 {aircraft.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.id}</td>
                     <td>{item.registrationNumber}</td>
-                    <td>{item.model}</td>
+                    <td>{item.model}<small className="row-details">{item.fuelCapacity} L · {item.maxSpeed} km/h · {item.maxAltitude} ft</small></td>
                     <td>{item.manufacturer}</td>
 
                     <td>
@@ -389,9 +384,6 @@ function AircraftPage() {
                       </span>
                     </td>
 
-                    <td>{item.fuelCapacity} L</td>
-                    <td>{item.maxSpeed} km/h</td>
-                    <td>{item.maxAltitude} ft</td>
 
                     <td>
                       <div className="table-actions">

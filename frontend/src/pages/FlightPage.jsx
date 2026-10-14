@@ -332,13 +332,13 @@ const FlightPage = () => {
       </div>
 
       {message && (
-        <div className="success-message">
+        <div className="success-message" role="status">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="error-message">
+        <div className="error-message" role="alert">
           {error}
         </div>
       )}
@@ -359,11 +359,12 @@ const FlightPage = () => {
         >
 
           <div className="form-group">
-            <label>
+            <label htmlFor="flight-number">
               Flight Number
             </label>
 
             <input
+              id="flight-number"
               type="text"
               name="flightNumber"
               value={form.flightNumber}
@@ -374,11 +375,12 @@ const FlightPage = () => {
           </div>
 
           <div className="form-group">
-            <label>
+            <label htmlFor="flight-departure">
               Departure
             </label>
 
             <input
+              id="flight-departure"
               type="text"
               name="departure"
               value={form.departure}
@@ -389,11 +391,12 @@ const FlightPage = () => {
           </div>
 
           <div className="form-group">
-            <label>
+            <label htmlFor="flight-destination">
               Destination
             </label>
 
             <input
+              id="flight-destination"
               type="text"
               name="destination"
               value={form.destination}
@@ -404,11 +407,12 @@ const FlightPage = () => {
           </div>
 
           <div className="form-group">
-            <label>
+            <label htmlFor="flight-scheduled">
               Scheduled Time
             </label>
 
             <input
+              id="flight-scheduled"
               type="datetime-local"
               name="scheduledTime"
               value={form.scheduledTime}
@@ -418,11 +422,12 @@ const FlightPage = () => {
           </div>
 
           <div className="form-group">
-            <label>
+            <label htmlFor="flight-aircraft">
               Aircraft
             </label>
 
             <select
+              id="flight-aircraft"
               name="aircraftId"
               value={form.aircraftId}
               onChange={handleChange}
@@ -506,11 +511,9 @@ const FlightPage = () => {
 
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Flight</th>
                   <th>Aircraft</th>
                   <th>Route</th>
-                  <th>Scheduled</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -523,37 +526,20 @@ const FlightPage = () => {
                   <tr key={flight.id}>
 
                     <td>
-                      {flight.id}
-                    </td>
-
-                    <td>
                       {flight.flightNumber}
+                      <small className="row-details">{flight.scheduledTime ? new Date(flight.scheduledTime).toLocaleString() : 'Not scheduled'}</small>
                     </td>
 
                     <td>
                       {flight.aircraft
                         ?.registrationNumber}
 
-                      {flight.aircraft?.status && (
-                        <>
-                          {" "}
-                          ({flight.aircraft.status})
-                        </>
-                      )}
                     </td>
 
                     <td>
                       {flight.departure}
                       {" → "}
                       {flight.destination}
-                    </td>
-
-                    <td>
-                      {flight.scheduledTime
-                        ? new Date(
-                            flight.scheduledTime
-                          ).toLocaleString()
-                        : "-"}
                     </td>
 
                     <td>

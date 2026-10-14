@@ -5,6 +5,8 @@ backend/target/
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.env.local
+/tmp/ui-qa/
+/output/ui-review/
 
 /backend/target/
 /frontend/node_modules/

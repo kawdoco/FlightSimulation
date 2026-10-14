@@ -1,40 +1,48 @@
 import { Canvas } from "@react-three/fiber";
-import { Sky } from "@react-three/drei";
 import { useEffect, useRef } from "react";
 
 import Aircraft from "./Aircraft";
 import Runway from "./Runway";
+import FlightEnvironment from "./FlightEnvironment";
+import Atmosphere from "./Atmosphere";
 import ChaseCamera from "./ChaseCamera";
 import { advanceSpeed } from "./speedDynamics";
 
 import TelemetryPanel from "../components/TelemetryPanel";
 import FlightHUD from "../components/FlightHUD";
+import Icon from "../components/Icon";
 
 const FlightScene = ({ telemetry }) => {
   const aircraftRef = useRef();
 
   return (
     <>
-      <color attach="background" args={["#9bbbd2"]} />
-      <ambientLight intensity={1.2} />
+      <color attach="background" args={["#9dbcd5"]} />
+      <fog attach="fog" args={["#abc0cf", 450, 1550]} />
+      <ambientLight intensity={0.65} />
 
       <hemisphereLight
         skyColor="#dbeafe"
-        groundColor="#172554"
-        intensity={1.5}
+        groundColor="#6d7055"
+        intensity={0.9}
       />
 
       <directionalLight
-        position={[10, 20, 10]}
-        intensity={3}
+        position={[-35, 65, 25]}
+        intensity={2.2}
         castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-45}
+        shadow-camera-right={45}
+        shadow-camera-top={45}
+        shadow-camera-bottom={-45}
+        shadow-camera-far={180}
+        shadow-bias={-0.0002}
       />
 
-      <Sky
-        distance={1000}
-        sunPosition={[10, 5, 10]}
-      />
+      <Atmosphere />
 
+      <FlightEnvironment />
       <Runway />
 
       <Aircraft
@@ -172,29 +180,14 @@ const FlightSimulator = ({
     <>
       <section className="simulator-card">
         <div className="simulator-header">
-          <div>
-            <h2>Live Flight Simulator</h2>
-
-            <p>
-              {controlMode === "keyboard"
-                ? "W/S Pitch · A/D Roll · Q/E Heading · ↑/↓ Throttle · R Level Aircraft"
-                : "Aircraft controls follow incoming backend telemetry."}
-            </p>
+          <div className="simulator-mode">
+            <span>Control mode</span>
+            <div className="mode-switch" role="group" aria-label="Control mode">
+              <button type="button" aria-pressed={controlMode === "keyboard"} onClick={() => setControlMode("keyboard")}><Icon name="keyboard" />Keyboard</button>
+              <button type="button" aria-pressed={controlMode === "iot"} onClick={() => setControlMode("iot")}><Icon name="chip" />IoT / ESP32</button>
+            </div>
           </div>
-
-          <label htmlFor="control-mode">
-            Control Mode{" "}
-            <select
-              id="control-mode"
-              value={controlMode}
-              onChange={(event) =>
-                setControlMode(event.target.value)
-              }
-            >
-              <option value="keyboard">Keyboard</option>
-              <option value="iot">IoT / ESP32</option>
-            </select>
-          </label>
+          <button type="button" className="level-button" disabled={controlMode !== "keyboard"} onClick={() => setTelemetry(current => ({ ...current, pitch: 0, roll: 0 }))}><Icon name="level" />Level aircraft<kbd>R</kbd></button>
         </div>
 
         <div className="canvas-wrapper">
@@ -204,16 +197,19 @@ const FlightSimulator = ({
               position: [0, 5, 15],
               fov: 55,
               near: 0.1,
-              far: 2000,
+              far: 4000,
             }}
           >
             <FlightScene telemetry={telemetry} />
           </Canvas>
 
-          <FlightHUD telemetry={telemetry} />
+          <FlightHUD telemetry={telemetry} controlMode={controlMode} />
         </div>
       </section>
 
+      {controlMode === "keyboard" ? <div className="controls-strip" aria-label="Keyboard controls">
+        {[["W", "S", "Pitch"], ["A", "D", "Roll"], ["Q", "E", "Heading"], ["↑", "↓", "Throttle"], ["R", null, "Level aircraft"]].map(([first, second, label]) => <div className="control-hint" key={label}><kbd>{first}</kbd>{second && <kbd>{second}</kbd>}<span>{label}</span></div>)}
+      </div> : <div className="controls-strip iot-hint"><Icon name="info" />Aircraft controls follow incoming backend telemetry. Keyboard controls are paused.</div>}
       <TelemetryPanel telemetry={telemetry} />
     </>
   );

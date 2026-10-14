@@ -82,15 +82,16 @@ function FlightHistoryPage() {
       <div className="page-header">
         <div>
           <h1>Flight History</h1>
-          <p>Search and view previous flight records.</p>
+          <p>Find flight records and download telemetry reports.</p>
         </div>
       </div>
 
       <div className="history-filters">
         <div className="filter-group">
-          <label>Aircraft</label>
+          <label htmlFor="history-aircraft">Aircraft</label>
 
           <select
+            id="history-aircraft"
             value={aircraftId}
             onChange={(e) => setAircraftId(e.target.value)}
           >
@@ -105,9 +106,10 @@ function FlightHistoryPage() {
         </div>
 
         <div className="filter-group">
-          <label>Status</label>
+          <label htmlFor="history-status">Status</label>
 
           <select
+            id="history-status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
@@ -120,9 +122,10 @@ function FlightHistoryPage() {
         </div>
 
         <div className="filter-group">
-          <label>From Date</label>
+          <label htmlFor="history-start">From Date</label>
 
           <input
+            id="history-start"
             type="date"
             value={start}
             onChange={(e) => setStart(e.target.value)}
@@ -130,9 +133,10 @@ function FlightHistoryPage() {
         </div>
 
         <div className="filter-group">
-          <label>To Date</label>
+          <label htmlFor="history-end">To Date</label>
 
           <input
+            id="history-end"
             type="date"
             value={end}
             onChange={(e) => setEnd(e.target.value)}
@@ -140,8 +144,8 @@ function FlightHistoryPage() {
         </div>
 
         <div className="filter-actions">
-          <button type="button" onClick={loadHistory}>
-            Search
+          <button type="button" onClick={loadHistory} disabled={loading}>
+            Apply filters
           </button>
 
           <button type="button" onClick={clearFilters}>
@@ -164,18 +168,13 @@ function FlightHistoryPage() {
 
       {!loading && flights.length > 0 && (
         <div className="table-wrapper">
-          <table>
+          <table className="history-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Flight</th>
                 <th>Aircraft</th>
-                <th>Departure</th>
-                <th>Destination</th>
+                <th>Route</th>
                 <th>Status</th>
-                <th>Scheduled Time</th>
-                <th>Start Time</th>
-                <th>End Time</th>
                 <th>Report</th>
               </tr>
             </thead>
@@ -183,34 +182,14 @@ function FlightHistoryPage() {
             <tbody>
               {flights.map((flight) => (
                 <tr key={flight.id}>
-                  <td>{flight.id}</td>
-                  <td>{flight.flightNumber}</td>
+                  <td>{flight.flightNumber}<small className="row-details">{flight.scheduledTime ? new Date(flight.scheduledTime).toLocaleString() : 'Not scheduled'}</small></td>
 
                   <td>
                     {flight.aircraft?.registrationNumber || "-"}
                   </td>
 
-                  <td>{flight.departure}</td>
-                  <td>{flight.destination}</td>
-                  <td>{flight.status}</td>
-
-                  <td>
-                    {flight.scheduledTime
-                      ? new Date(flight.scheduledTime).toLocaleString()
-                      : "-"}
-                  </td>
-
-                  <td>
-                    {flight.startTime
-                      ? new Date(flight.startTime).toLocaleString()
-                      : "-"}
-                  </td>
-
-                  <td>
-                    {flight.endTime
-                      ? new Date(flight.endTime).toLocaleString()
-                      : "-"}
-                  </td>
+                  <td>{flight.departure} → {flight.destination}</td>
+                  <td><span className={`aircraft-status ${flight.status.toLowerCase().replaceAll('_', '-')}`}>{flight.status.replaceAll('_', ' ')}</span></td>
 
                   <td>
                     <button

@@ -1,325 +1,64 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { downloadTelemetryCsv, getTelemetryReport, getTelemetrySummary } from '../services/reportService';
+import { getFlightById } from '../services/flightService';
+import Icon from '../components/Icon';
 
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
-
-import {
-  downloadTelemetryCsv,
-  getTelemetryReport,
-  getTelemetrySummary,
-} from "../services/reportService";
-
-function TelemetryReportPage() {
-
+export default function TelemetryReportPage() {
   const { flightId } = useParams();
-
-  const navigate = useNavigate();
-
-  const [summary, setSummary] =
-    useState(null);
-
-  const [telemetry, setTelemetry] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
+  const [summary, setSummary] = useState(null);
+  const [flight, setFlight] = useState(null);
+  const [telemetry, setTelemetry] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-
-    loadReport();
-
+    let disposed = false;
+    setLoading(true);
+    setError('');
+    setSummary(null);
+    setFlight(null);
+    setTelemetry([]);
+    Promise.all([getTelemetrySummary(flightId), getTelemetryReport(flightId), getFlightById(flightId)])
+      .then(([summaryData, records, flightData]) => {
+        if (disposed) return;
+        setSummary(summaryData);
+        setTelemetry(records);
+        setFlight(flightData);
+      })
+      .catch(() => { if (!disposed) setError('Unable to load telemetry report. Please try again.'); })
+      .finally(() => { if (!disposed) setLoading(false); });
+    return () => { disposed = true; };
   }, [flightId]);
 
-  const loadReport = async () => {
-
-    try {
-
-      setLoading(true);
-      setError("");
-
-      const [
-        summaryData,
-        telemetryData,
-      ] = await Promise.all([
-        getTelemetrySummary(flightId),
-        getTelemetryReport(flightId),
-      ]);
-
-      setSummary(summaryData);
-      setTelemetry(telemetryData);
-
-    } catch (error) {
-
-      console.error(error);
-
-      setError(
-        "Unable to load telemetry report."
-      );
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  };
-
   const exportCsv = async () => {
-
-    try {
-
-      await downloadTelemetryCsv(
-        flightId
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-      setError(
-        "Unable to export telemetry."
-      );
-
-    }
-
+    setExporting(true);
+    setError('');
+    try { await downloadTelemetryCsv(flightId); }
+    catch { setError('Unable to export telemetry. Please try again.'); }
+    finally { setExporting(false); }
   };
-
-  if (loading) {
-
-    return (
-      <div className="page-container">
-        <p>Loading report...</p>
-      </div>
-    );
-
-  }
-
-  return (
-
-    <div className="page-container">
-
-      <button
-        onClick={() =>
-          navigate("/history")
-        }
-      >
-        Back to History
-      </button>
-
-      <h1>Telemetry Report</h1>
-
-      {error && (
-        <p className="error-message">
-          {error}
-        </p>
-      )}
-
-      {summary && (
-
-        <>
-
-          <h2>
-            {summary.flightNumber}
-          </h2>
-
-          <p>
-            Flight ID: {summary.flightId}
-          </p>
-
-          <p>
-            Status: {summary.status}
-          </p>
-
-          <div className="summary-grid">
-
-            <div className="summary-card">
-
-              <h3>
-                Records
-              </h3>
-
-              <p>
-                {summary.recordCount}
-              </p>
-
-            </div>
-
-            <div className="summary-card">
-
-              <h3>
-                Average Altitude
-              </h3>
-
-              <p>
-                {Number(
-                  summary.averageAltitude
-                ).toFixed(2)}
-              </p>
-
-            </div>
-
-            <div className="summary-card">
-
-              <h3>
-                Maximum Altitude
-              </h3>
-
-              <p>
-                {Number(
-                  summary.maxAltitude
-                ).toFixed(2)}
-              </p>
-
-            </div>
-
-            <div className="summary-card">
-
-              <h3>
-                Average Speed
-              </h3>
-
-              <p>
-                {Number(
-                  summary.averageSpeed
-                ).toFixed(2)}
-              </p>
-
-            </div>
-
-            <div className="summary-card">
-
-              <h3>
-                Maximum Speed
-              </h3>
-
-              <p>
-                {Number(
-                  summary.maxSpeed
-                ).toFixed(2)}
-              </p>
-
-            </div>
-
-            <div className="summary-card">
-
-              <h3>
-                Minimum Fuel
-              </h3>
-
-              <p>
-                {Number(
-                  summary.minimumFuel
-                ).toFixed(2)}
-                %
-              </p>
-
-            </div>
-
-          </div>
-
-          <button onClick={exportCsv}>
-            Export CSV
-          </button>
-
-        </>
-
-      )}
-
+  const metrics = summary ? [
+    ['Record count', summary.recordCount, ''],
+    ['Average altitude', Number(summary.averageAltitude).toFixed(1), 'ft'],
+    ['Max altitude', Number(summary.maxAltitude).toFixed(0), 'ft'],
+    ['Average speed', Number(summary.averageSpeed).toFixed(1), 'km/h'],
+    ['Max speed', Number(summary.maxSpeed).toFixed(0), 'km/h'],
+    ['Minimum fuel', Number(summary.minimumFuel).toFixed(1), '%'],
+  ] : [];
+  return <div className="page-container">
+    <div className="page-header"><div><h1>Telemetry Report</h1><Link className="back-link" to="/history"><Icon name="back" size={16} />Back to reports</Link></div><button className="primary-btn export-button" type="button" onClick={exportCsv} disabled={loading || !summary || exporting}><Icon name="download" size={17} />{exporting ? 'Exporting…' : 'Export CSV'}</button></div>
+    {loading && <div className="empty-state" role="status">Loading report…</div>}
+    {error && <p className="error-message" role="alert">{error}</p>}
+    {summary && <>
+      <div className="report-banner"><h2>{summary.flightNumber}</h2><span className={`aircraft-status ${summary.status.toLowerCase().replaceAll('_', '-')}`}>{summary.status.replaceAll('_', ' ')}</span><p>Aircraft: {flight?.aircraft?.registrationNumber ?? '—'} · Route: {flight?.departure} → {flight?.destination} · Flight ID: {summary.flightId}</p><p>Started: {flight?.startTime ? new Date(flight.startTime).toLocaleString() : 'Not started'} · Completed: {flight?.endTime ? new Date(flight.endTime).toLocaleString() : 'Not completed'}</p></div>
+      <div className="summary-grid">{metrics.map(([title, value, unit]) => <div className="summary-card" key={title}><h3>{title}</h3><p>{value} <small>{unit}</small></p></div>)}</div>
       <h2>Telemetry History</h2>
-
-      {telemetry.length === 0 ? (
-
-        <p>
-          No telemetry recorded for this flight.
-        </p>
-
-      ) : (
-
-        <div className="table-wrapper">
-
-          <table>
-
-            <thead>
-
-              <tr>
-                <th>Time</th>
-                <th>Altitude</th>
-                <th>Speed</th>
-                <th>Pitch</th>
-                <th>Roll</th>
-                <th>Heading</th>
-                <th>Throttle</th>
-                <th>Fuel</th>
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {telemetry.map((item) => (
-
-                <tr key={item.id}>
-
-                  <td>
-                    {item.recordedAt
-                      ? new Date(
-                          item.recordedAt
-                        ).toLocaleString()
-                      : "-"}
-                  </td>
-
-                  <td>
-                    {item.altitude}
-                  </td>
-
-                  <td>
-                    {item.speed}
-                  </td>
-
-                  <td>
-                    {item.pitch}
-                  </td>
-
-                  <td>
-                    {item.roll}
-                  </td>
-
-                  <td>
-                    {item.heading}
-                  </td>
-
-                  <td>
-                    {item.throttle}
-                  </td>
-
-                  <td>
-                    {item.fuel}
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      )}
-
-    </div>
-
-  );
-
+      {telemetry.length === 0 ? <div className="empty-state">No telemetry recorded for this flight.</div> : <div className="table-wrapper"><table>
+        <thead><tr>{['Time', 'Altitude (ft)', 'Speed (km/h)', 'Pitch (°)', 'Roll (°)', 'Heading (°)', 'Throttle (%)', 'Fuel (%)'].map(title => <th key={title} scope="col">{title}</th>)}</tr></thead>
+        <tbody>{telemetry.map(item => <tr key={item.id}><td>{item.recordedAt ? new Date(item.recordedAt).toLocaleString() : '—'}</td>{['altitude', 'speed', 'pitch', 'roll', 'heading', 'throttle', 'fuel'].map(field => <td key={field}>{Number(item[field]).toFixed(1)}</td>)}</tr>)}</tbody>
+      </table></div>}
+    </>}
+  </div>;
 }
-
-export default TelemetryReportPage;
