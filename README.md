@@ -202,7 +202,7 @@ Physical Controls / Sensors
 
 ### Database
 
-* MySQL
+* Supabase
 
 ### IoT
 
@@ -312,7 +312,7 @@ FlightSimulation/
 │   └── sensors/
 │
 ├── database/
-│   └── schema.sql
+│   └── FlightSimulation/supabase
 │
 ├── docs/
 │   ├── architecture/
