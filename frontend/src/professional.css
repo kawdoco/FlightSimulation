@@ -1,4 +1,7 @@
 /* Refined aviation workspace. App.css supplies shared layout and interactions. */
+.scene-options { display: flex; align-items: center; gap: 12px; }
+.scene-options label { font-size: 12px; white-space: nowrap; }
+.scene-options select { width: 150px; padding: 9px 12px; }
 :root { background: #111923; color: #e7edf3; --surface: #1a2734; --border: #334350; --muted: #a5b4c6; --accent: #7bd8ec; }
 body { font-size: 14px; }
 .sidebar { width: 208px; background: #141f2b; border-color: #2c3947; padding: 26px 14px 20px; }
@@ -61,7 +64,7 @@ tbody tr:hover { background: #21313f; }
 .telemetry-page .telemetry-card { min-height: 160px; gap: 20px; }
 .telemetry-page .telemetry-card strong { font-size: 32px; }
 .simulator-card { border-radius: 4px; border: 0; background: transparent; }
-.simulator-header { padding: 13px 0 16px; border-top: 1px solid #334350; gap: 14px; }
+.simulator-header { padding: 12px 14px; border: 1px solid #334350; border-radius: 6px; background: #1b2734; gap: 14px; margin-bottom: 12px; }
 .simulator-mode { gap: 20px; }
 .simulator-mode > span { font: 10px Consolas, monospace; font-weight: 400; text-transform: uppercase; letter-spacing: 1px; color: #a5b8ce; }
 .mode-switch { border-radius: 3px; border-color: #526677; }
@@ -128,6 +131,8 @@ kbd { border-radius: 3px; font-size: 11px; min-width: 27px; height: 28px; backgr
   .canvas-wrapper { height: 400px; }
 }
 @media (max-width: 600px) {
+  .scene-options { flex: 1; min-width: 135px; }
+  .scene-options select { width: 100%; }
   .sidebar { width: 100%; padding: 14px; }
   .logo { padding: 0 6px 12px; }
   .logo h2 { flex-direction: row; font-size: 21px; gap: 10px; }

@@ -7,14 +7,13 @@ import {
   useRef,
 } from "react";
 import * as THREE from "three";
+import { FEET_PER_WORLD_UNIT } from "./speedDynamics";
 
 const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
   const aircraftRef = useRef();
   const { scene } = useGLTF("/models/aircraft.glb");
 
   useEffect(() => {
-    const aircraftColor = new THREE.Color("#64748b");
-
     scene.traverse((object) => {
       if (!object.isMesh) return;
 
@@ -32,21 +31,23 @@ const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
         material.opacity = 1;
         material.depthWrite = true;
 
-        // Avoid repeatedly changing the color during effect reruns.
-        if (
-          material.color &&
-          !material.userData.aircraftColorApplied
-        ) {
-          material.color.lerp(aircraftColor, 0.35);
-          material.userData.aircraftColorApplied = true;
+        if ('transmission' in material) material.transmission = 0;
+        if (material.name.startsWith('11803_Airplane')) {
+          const body = material.name.includes('body');
+          const details = material.name.includes('details');
+          material.color.set(body ? '#d4dbe2' : details ? '#8998a5' : '#bac5d0');
+          material.metalness = body ? .16 : .28;
+          material.roughness = details ? .52 : .38;
+          if ('clearcoat' in material) material.clearcoat = .1;
         }
+        material.needsUpdate = true;
       });
     });
   }, [scene]);
 
   useImperativeHandle(ref, () => aircraftRef.current);
 
-  useFrame((_, delta) => {
+  useFrame(({ invalidate }, delta) => {
     if (!aircraftRef.current) return;
 
     const aircraft = aircraftRef.current;
@@ -117,21 +118,16 @@ const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
     aircraft.position.z -=
       Math.cos(aircraft.rotation.y) * distance;
 
-    // Ignore small pitch fluctuations around level.
-    const climbPitch =
-      Math.abs(pitchDegrees) < 1 ? 0 : pitchDegrees;
+    // Telemetry is the source of truth in keyboard and IoT modes.
+    const targetAltitude = 1.1 + Math.max(0, numeric(telemetry.altitude)) / FEET_PER_WORLD_UNIT;
+    aircraft.position.y = THREE.MathUtils.lerp(aircraft.position.y, targetAltitude, smoothing);
 
-    // Simple demo takeoff, climb, and descent.
-    if (speed > 120 || aircraft.position.y > 1.1) {
-      aircraft.position.y +=
-        climbPitch * 0.5 * frameDelta;
+    // Keep animating during movement; let the renderer sleep when the scene settles.
+    if (speed === 0 && (Math.abs(aircraft.rotation.x - targetPitch) > .001
+      || Math.abs(aircraft.rotation.z - targetRoll) > .001
+      || Math.abs(headingDifference) > .001 || Math.abs(aircraft.position.y - targetAltitude) > .001)) {
+      invalidate();
     }
-
-    // Keep the aircraft above the runway.
-    aircraft.position.y = Math.max(
-      1.1,
-      aircraft.position.y
-    );
   });
 
   return (

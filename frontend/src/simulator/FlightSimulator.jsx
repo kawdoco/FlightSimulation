@@ -1,37 +1,49 @@
-import { Canvas } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { useEffect, useRef, useState } from "react";
 
 import Aircraft from "./Aircraft";
 import Runway from "./Runway";
 import FlightEnvironment from "./FlightEnvironment";
 import Atmosphere from "./Atmosphere";
 import ChaseCamera from "./ChaseCamera";
-import { advanceSpeed } from "./speedDynamics";
+import { advanceSpeed, advanceAltitude } from "./speedDynamics";
+import { CAMERA_VIEWS, QUALITY_PRESETS } from "./sceneSettings";
 
 import TelemetryPanel from "../components/TelemetryPanel";
 import FlightHUD from "../components/FlightHUD";
 import Icon from "../components/Icon";
 
-const FlightScene = ({ telemetry }) => {
+const FlightScene = ({ telemetry, cameraMode, quality }) => {
   const aircraftRef = useRef();
+  const sunlightRef = useRef();
+  const settings = QUALITY_PRESETS[quality];
+  useFrame(() => {
+    if (!aircraftRef.current || !sunlightRef.current) return;
+    const position = aircraftRef.current.position;
+    sunlightRef.current.position.set(position.x - 35, position.y + 65, position.z + 25);
+    sunlightRef.current.target.position.copy(position);
+    sunlightRef.current.target.updateMatrixWorld();
+  });
 
   return (
     <>
       <color attach="background" args={["#9dbcd5"]} />
-      <fog attach="fog" args={["#abc0cf", 450, 1550]} />
+      <fog attach="fog" args={["#a9c0d2", 650, 2800]} />
       <ambientLight intensity={0.65} />
 
       <hemisphereLight
         skyColor="#dbeafe"
-        groundColor="#6d7055"
+        groundColor="#727b83"
         intensity={0.9}
       />
 
       <directionalLight
+        ref={sunlightRef}
+        key={quality}
         position={[-35, 65, 25]}
         intensity={2.2}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+        castShadow={settings.shadows}
+        shadow-mapSize={[settings.shadowSize, settings.shadowSize]}
         shadow-camera-left={-45}
         shadow-camera-right={45}
         shadow-camera-top={45}
@@ -42,7 +54,7 @@ const FlightScene = ({ telemetry }) => {
 
       <Atmosphere />
 
-      <FlightEnvironment />
+      <FlightEnvironment quality={quality} />
       <Runway />
 
       <Aircraft
@@ -50,7 +62,7 @@ const FlightScene = ({ telemetry }) => {
         telemetry={telemetry}
       />
 
-      <ChaseCamera aircraftRef={aircraftRef} />
+      <ChaseCamera aircraftRef={aircraftRef} cameraMode={cameraMode} />
     </>
   );
 };
@@ -61,6 +73,9 @@ const FlightSimulator = ({
   controlMode,
   setControlMode,
 }) => {
+  const [cameraMode, setCameraMode] = useState("chase");
+  const [quality, setQuality] = useState("medium");
+  const settings = QUALITY_PRESETS[quality];
   useEffect(() => {
     if (controlMode !== "keyboard") return;
 
@@ -72,7 +87,10 @@ const FlightSimulator = ({
 
       setTelemetry((current) => {
         const speed = advanceSpeed(current.speed, current.throttle, elapsedSeconds);
-        return speed === current.speed ? current : { ...current, speed };
+        const altitude = advanceAltitude(current.altitude, speed, current.pitch, elapsedSeconds);
+        return speed === current.speed && altitude === current.altitude
+          ? current
+          : { ...current, speed, altitude };
       });
     }, 100);
 
@@ -187,12 +205,17 @@ const FlightSimulator = ({
               <button type="button" aria-pressed={controlMode === "iot"} onClick={() => setControlMode("iot")}><Icon name="chip" />IoT / ESP32</button>
             </div>
           </div>
+          <div className="scene-options"><label htmlFor="camera-view">Camera</label><select id="camera-view" value={cameraMode} onChange={event => setCameraMode(event.target.value)}>{Object.entries(CAMERA_VIEWS).map(([value, view]) => <option key={value} value={value}>{view.label}</option>)}</select></div>
+          <div className="scene-options"><label htmlFor="scene-quality">Quality</label><select id="scene-quality" value={quality} onChange={event => setQuality(event.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
           <button type="button" className="level-button" disabled={controlMode !== "keyboard"} onClick={() => setTelemetry(current => ({ ...current, pitch: 0, roll: 0 }))}><Icon name="level" />Level aircraft<kbd>R</kbd></button>
         </div>
 
         <div className="canvas-wrapper">
           <Canvas
-            shadows
+            shadows={settings.shadows}
+            dpr={[1, settings.dpr]}
+            frameloop={Number(telemetry.speed) > 0 ? "always" : "demand"}
+            gl={{ antialias: false, powerPreference: 'high-performance' }}
             camera={{
               position: [0, 5, 15],
               fov: 55,
@@ -200,10 +223,10 @@ const FlightSimulator = ({
               far: 4000,
             }}
           >
-            <FlightScene telemetry={telemetry} />
+            <FlightScene telemetry={telemetry} cameraMode={cameraMode} quality={quality} />
           </Canvas>
 
-          <FlightHUD telemetry={telemetry} controlMode={controlMode} />
+          <FlightHUD telemetry={telemetry} controlMode={controlMode} cameraMode={cameraMode} />
         </div>
       </section>
 

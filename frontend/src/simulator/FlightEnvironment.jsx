@@ -1,12 +1,16 @@
-import { useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { createCloudTexture, createSurfaceTexture } from './environmentTextures';
+import MountainRange from './MountainRange';
+import AirportScenery from './AirportScenery';
+import { QUALITY_PRESETS } from './sceneSettings';
 
-export default function FlightEnvironment() {
+function FlightEnvironment({ quality = 'medium' }) {
   const grass = useMemo(() => createSurfaceTexture('grass'), []);
   const cloud = useMemo(createCloudTexture, []);
   const terrain = useMemo(() => {
-    const geometry = new THREE.PlaneGeometry(2400, 2400, 112, 112);
+    const segments = QUALITY_PRESETS[quality].terrainSegments;
+    const geometry = new THREE.PlaneGeometry(2400, 2400, segments, segments);
     const positions = geometry.attributes.position;
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i);
@@ -21,16 +25,24 @@ export default function FlightEnvironment() {
     }
     geometry.computeVertexNormals();
     return geometry;
-  }, []);
-  useEffect(() => () => { grass.dispose(); cloud.dispose(); terrain.dispose(); }, [grass, cloud, terrain]);
+  }, [quality]);
+  useEffect(() => () => { grass.dispose(); cloud.dispose(); }, [grass, cloud]);
+  useEffect(() => () => terrain.dispose(), [terrain]);
   return <group>
+    <MountainRange />
+    <AirportScenery quality={quality} />
     <mesh geometry={terrain} rotation={[-Math.PI / 2, 0, 0]} position={[0, -.12, 0]} receiveShadow>
       <meshStandardMaterial map={grass} roughness={1} />
     </mesh>
     {[
-      [-360, 130, -650, 220, 80], [-100, 160, -800, 260, 80],
-      [280, 140, -700, 240, 72], [480, 180, -920, 260, 90],
-      [-600, 190, -450, 290, 100], [500, 210, 120, 250, 90],
+      [-480, 180, -700, 310, 90], [-220, 210, -850, 260, 100],
+      [40, 185, -800, 240, 72], [300, 220, -950, 320, 90],
+      [600, 170, -780, 240, 70], [-640, 230, -450, 290, 95],
+      [-100, 290, -1000, 420, 95], [500, 310, -1100, 460, 85],
+      [-350, 320, -1100, 330, 75], [200, 300, -650, 290, 60],
+      [500, 210, 120, 250, 90],
     ].map(([x, y, z, width, height], index) => <sprite key={index} position={[x, y, z]} scale={[width, height, 1]}><spriteMaterial map={cloud} transparent opacity={.85} depthWrite={false} fog={false} toneMapped={false} /></sprite>)}
   </group>;
 }
+
+export default memo(FlightEnvironment);

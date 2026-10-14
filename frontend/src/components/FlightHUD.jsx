@@ -1,4 +1,4 @@
-export default function FlightHUD({ telemetry, controlMode }) {
+export default function FlightHUD({ telemetry, controlMode, cameraMode = 'chase' }) {
   const format = (value, decimals = 0) => (Number(value) || 0).toFixed(decimals);
   const warnings = [];
   if (telemetry.speed > 0 && telemetry.speed < 100 && telemetry.altitude > 100) warnings.push('STALL WARNING');
@@ -17,7 +17,7 @@ export default function FlightHUD({ telemetry, controlMode }) {
       ].map(([label, value]) => <div className="instrument-reading" key={label}><span>{label.toUpperCase()}</span><strong>{value}</strong></div>)}
     </div>
     <div className="hud-center"><div className="crosshair"><span /><span /></div><div className="hud-attitude"><span>PITCH {format(telemetry.pitch, 1)}°</span><span>ROLL {roll.toFixed(1)}°</span></div></div>
-    <div className="viewport-mode">{controlMode === 'keyboard' ? 'KEYBOARD CONTROL' : 'IoT / ESP32 CONTROL'}</div>
+    <div className="viewport-mode">{cameraMode.toUpperCase()} CAMERA{controlMode === 'iot' ? ' · IoT / ESP32' : ''}</div>
     {warnings.length > 0 && <div className="warning-panel" role="status">{warnings.map(warning => <div key={warning} className="flight-warning">⚠ {warning}</div>)}</div>}
   </div>;
 }
