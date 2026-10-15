@@ -8,6 +8,7 @@ import Atmosphere from "./Atmosphere";
 import ChaseCamera from "./ChaseCamera";
 import { advanceSpeed, advanceAltitude } from "./speedDynamics";
 import { CAMERA_VIEWS, QUALITY_PRESETS } from "./sceneSettings";
+import useFlightAudio from "./useFlightAudio";
 
 import TelemetryPanel from "../components/TelemetryPanel";
 import FlightHUD from "../components/FlightHUD";
@@ -75,6 +76,7 @@ const FlightSimulator = ({
 }) => {
   const [cameraMode, setCameraMode] = useState("chase");
   const [quality, setQuality] = useState("medium");
+  const sound = useFlightAudio(telemetry);
   const settings = QUALITY_PRESETS[quality];
   useEffect(() => {
     if (controlMode !== "keyboard") return;
@@ -207,8 +209,13 @@ const FlightSimulator = ({
           </div>
           <div className="scene-options"><label htmlFor="camera-view">Camera</label><select id="camera-view" value={cameraMode} onChange={event => setCameraMode(event.target.value)}>{Object.entries(CAMERA_VIEWS).map(([value, view]) => <option key={value} value={value}>{view.label}</option>)}</select></div>
           <div className="scene-options"><label htmlFor="scene-quality">Quality</label><select id="scene-quality" value={quality} onChange={event => setQuality(event.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+          <div className="flight-audio-controls">
+            <button type="button" className="level-button sound-toggle" aria-pressed={sound.enabled} disabled={sound.busy} onClick={sound.toggle} title="Engine sound follows throttle; wind follows airspeed."><Icon name="sound" size={17} />{sound.busy ? 'Starting…' : sound.enabled ? 'Sound on' : 'Sound off'}</button>
+            {sound.enabled && <label className="sound-volume">Volume<input aria-label="Engine sound volume" type="range" min="0" max="100" value={Math.round(sound.volume * 100)} onChange={event => sound.setVolume(Number(event.target.value) / 100)} /></label>}
+          </div>
           <button type="button" className="level-button" disabled={controlMode !== "keyboard"} onClick={() => setTelemetry(current => ({ ...current, pitch: 0, roll: 0 }))}><Icon name="level" />Level aircraft<kbd>R</kbd></button>
         </div>
+        {sound.error && <p className="error-message" role="alert">{sound.error}</p>}
 
         <div className="canvas-wrapper">
           <Canvas

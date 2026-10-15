@@ -1,4 +1,5 @@
 const paths = {
+  sound: 'M3 9h4l5-4v14l-5-4H3V9Zm12-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',
   plane: 'M22 2 9 15m13-13-5 20-4-9-9-4 18-7Z',
   dashboard: 'm3 10 9-7 9 7v11h-6v-7H9v7H3V10Z',
   aircraft: 'm12 3 2 7 7 3v2l-7-1v5l3 2v1l-5-1-5 1v-1l3-2v-5l-7 1v-2l7-3 2-7Z',

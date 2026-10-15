@@ -1,4 +1,8 @@
 /* Refined aviation workspace. App.css supplies shared layout and interactions. */
+.flight-audio-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sound-toggle[aria-pressed="true"] { color: #09212a; background: var(--accent); border-color: var(--accent); }
+.sound-volume { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.sound-volume input { width: 75px; padding: 0; accent-color: var(--accent); }
 .scene-options { display: flex; align-items: center; gap: 12px; }
 .scene-options label { font-size: 12px; white-space: nowrap; }
 .scene-options select { width: 150px; padding: 9px 12px; }
