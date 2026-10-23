@@ -1,29 +1,57 @@
 package com.flightsimulation.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "telemetry")
+@Table(name = "telemetry", indexes = @Index(name = "idx_telemetry_flight_recorded", columnList = "flight_id,recorded_at"))
 public class Telemetry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private Long id;
 
+    @NotNull(message = "Altitude is required")
+    @PositiveOrZero(message = "Altitude cannot be negative")
     private Double altitude;
+
+    @NotNull(message = "Speed is required")
+    @PositiveOrZero(message = "Speed cannot be negative")
     private Double speed;
+
+    @NotNull(message = "Pitch is required")
     private Double pitch;
+
+    @NotNull(message = "Roll is required")
     private Double roll;
+
+    @NotNull(message = "Heading is required")
+    @Min(value = 0, message = "Heading must be at least 0")
+    @Max(value = 360, message = "Heading must be at most 360")
     private Double heading;
+
+    @NotNull(message = "Throttle is required")
+    @Min(value = 0, message = "Throttle must be at least 0")
+    @Max(value = 100, message = "Throttle must be at most 100")
     private Double throttle;
+
+    @NotNull(message = "Fuel is required")
+    @Min(value = 0, message = "Fuel must be at least 0")
+    @Max(value = 100, message = "Fuel must be at most 100")
     private Double fuel;
 
     @Column(name = "recorded_at")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private LocalDateTime recordedAt;
 
     @ManyToOne
-    @JoinColumn(name = "flight_id")
+    @JoinColumn(name = "flight_id", nullable = false)
     private Flight flight;
 
     public Telemetry() {
@@ -31,7 +59,9 @@ public class Telemetry {
 
     @PrePersist
     public void prePersist() {
-        recordedAt = LocalDateTime.now();
+        if (recordedAt == null) {
+            recordedAt = LocalDateTime.now();
+        }
     }
 
     public Long getId() {
@@ -114,3 +144,4 @@ public class Telemetry {
         this.flight = flight;
     }
 }
+

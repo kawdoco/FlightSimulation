@@ -1,81 +1,27 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from 'react-router-dom';
+import Icon from './Icon';
 
-const Sidebar = () => {
-  const getLinkClass = ({ isActive }) =>
-    isActive
-      ? "sidebar-link active"
-      : "sidebar-link";
+const links = [
+  ['/', 'Dashboard', 'dashboard'],
+  ['/aircraft', 'Aircraft', 'aircraft'],
+  ['/flights', 'Flights', 'flights'],
+  ['/simulator', 'Simulator', 'simulator'],
+  ['/telemetry', 'Telemetry', 'telemetry'],
+  ['/history', 'Flight Reports', 'report'],
+  ['/maintenance', 'Maintenance', 'maintenance'],
+  ['/iot-devices', 'IoT Devices', 'chip'],
+];
 
-  return (
-    <aside className="sidebar">
-
-      {/* Logo */}
-      <div className="logo">
-        <h2>✈ AeroSim</h2>
-        <span>EAD Flight System</span>
-      </div>
-
-      {/* Navigation */}
-      <nav>
-
-        <NavLink
-          to="/"
-          end
-          className={getLinkClass}
-        >
-          Dashboard
-        </NavLink>
-
-        <NavLink
-          to="/aircraft"
-          className={getLinkClass}
-        >
-          Aircraft
-        </NavLink>
-
-        <NavLink
-          to="/flights"
-          className={getLinkClass}
-        >
-          Flights
-        </NavLink>
-
-        <NavLink
-          to="/"
-          end
-          className={getLinkClass}
-        >
-          Simulator
-        </NavLink>
-
-        <NavLink
-          to="/telemetry"
-          className={getLinkClass}
-        >
-          Telemetry
-        </NavLink>
-
-        {/* Future Module */}
-        <span className="sidebar-link disabled-link">
-          Maintenance
-        </span>
-
-        {/* Future Module */}
-        <span className="sidebar-link disabled-link">
-          IoT Devices
-        </span>
-
-      </nav>
-
-      {/* Footer */}
-      <div className="sidebar-footer">
-        <small>
-          FlightSimulation Team
-        </small>
-      </div>
-
-    </aside>
-  );
-};
-
-export default Sidebar;
+export default function Sidebar() {
+  const { pathname } = useLocation();
+  return <aside className="sidebar">
+    <div className="logo"><h2><Icon name="aircraft" size={50} />AeroSim</h2><span>Flight Simulation</span></div>
+    <nav aria-label="Main navigation">
+      {links.map(([to, label, icon]) => {
+        const reportActive = to === '/history' && pathname.startsWith('/reports/');
+        return <NavLink key={to} to={to} end={to === '/'} aria-current={reportActive ? 'page' : undefined} className={({ isActive }) => `sidebar-link${isActive || reportActive ? ' active' : ''}`}><Icon name={icon} /><span>{label}</span></NavLink>;
+      })}
+    </nav>
+    <div className="sidebar-footer">FlightSimulation Team</div>
+  </aside>;
+}

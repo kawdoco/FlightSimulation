@@ -1,118 +1,21 @@
-import { useEffect, useState } from "react";
-import {
-  connectTelemetryWebSocket,
-  disconnectTelemetryWebSocket,
-} from "../services/telemetryService";
+import TelemetryStatus from '../components/TelemetryStatus';
+import MetricCard from '../components/MetricCard';
 
-const TelemetryPage = () => {
-  const [telemetry, setTelemetry] = useState({
-    altitude: 0,
-    speed: 0,
-    pitch: 0,
-    roll: 0,
-    heading: 0,
-    throttle: 0,
-    fuel: 100,
-  });
+export default function TelemetryPage({ telemetry, hasReceivedTelemetry, lastReceivedAt }) {
+  const format = (value, decimals = 0) => (Number(value) || 0).toFixed(decimals);
+  const items = [
+    ['Altitude', `${format(telemetry.altitude)} ft`, 'altitude'],
+    ['Speed', `${format(telemetry.speed)} km/h`, 'speed'],
+    ['Heading', `${format(telemetry.heading)}°`, 'heading'],
+    ['Fuel', `${format(telemetry.fuel, 1)}%`, 'fuel'],
+    ['Pitch', `${format(telemetry.pitch, 1)}°`, 'pitch'],
+    ['Roll', `${format(telemetry.roll, 1)}°`, 'roll'],
+    ['Throttle', `${format(telemetry.throttle)}%`, 'throttle'],
+    ['Flight', telemetry.flight?.flightNumber ?? '—', 'aircraft'],
+  ];
+  return <div className="telemetry-page">
+    <div className="page-header"><div><h1>Live Telemetry Monitoring</h1><p>Real-time flight data from your connected telemetry source.</p></div><TelemetryStatus lastReceivedAt={lastReceivedAt} /></div>
+    <div className="telemetry-grid">{items.map(([title, value, icon]) => <MetricCard key={title} title={title} value={value} icon={icon} />)}</div>
+  </div>;
+}
 
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => {
-    const client = connectTelemetryWebSocket(
-      (data) => {
-        console.log("Live telemetry:", data);
-
-        setTelemetry(data);
-        setConnected(true);
-      },
-      1
-    );
-
-    return () => {
-      if (client) {
-        disconnectTelemetryWebSocket();
-      }
-    };
-  }, []);
-
-  return (
-    <div className="telemetry-page">
-
-      <div className="page-header">
-        <div>
-          <h1>Live Telemetry Monitoring</h1>
-          <p>
-            Real-time aircraft flight data and
-            system monitoring
-          </p>
-        </div>
-
-        <div
-          className={
-            connected
-              ? "connection-status connected"
-              : "connection-status"
-          }
-        >
-          ● {connected ? "CONNECTED" : "WAITING"}
-        </div>
-      </div>
-
-      <div className="telemetry-grid">
-
-        <TelemetryCard
-          title="Altitude"
-          value={`${telemetry.altitude?.toFixed(0) ?? 0} ft`}
-        />
-
-        <TelemetryCard
-          title="Speed"
-          value={`${telemetry.speed?.toFixed(0) ?? 0} km/h`}
-        />
-
-        <TelemetryCard
-          title="Heading"
-          value={`${telemetry.heading?.toFixed(0) ?? 0}°`}
-        />
-
-        <TelemetryCard
-          title="Fuel"
-          value={`${telemetry.fuel?.toFixed(1) ?? 0}%`}
-        />
-
-        <TelemetryCard
-          title="Pitch"
-          value={`${telemetry.pitch?.toFixed(1) ?? 0}°`}
-        />
-
-        <TelemetryCard
-          title="Roll"
-          value={`${telemetry.roll?.toFixed(1) ?? 0}°`}
-        />
-
-        <TelemetryCard
-          title="Throttle"
-          value={`${telemetry.throttle?.toFixed(0) ?? 0}%`}
-        />
-
-        <TelemetryCard
-          title="Flight"
-          value="FS-001"
-        />
-
-      </div>
-
-    </div>
-  );
-};
-
-const TelemetryCard = ({ title, value }) => {
-  return (
-    <div className="telemetry-card">
-      <span>{title}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-};
-
-export default TelemetryPage;

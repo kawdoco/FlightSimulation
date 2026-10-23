@@ -9,11 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/flights")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${app.frontend.url}", exposedHeaders = "X-Request-ID")
 public class FlightController {
 
     private final FlightService flightService;
@@ -44,16 +45,39 @@ public class FlightController {
         );
     }
 
+    // ==========================================
+    // Sprint 2 - Flight History
+    // ==========================================
+
+    @GetMapping("/history")
+    public ResponseEntity<List<Flight>>
+    getFlightHistory(
+            @RequestParam(required = false) Long aircraftId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) LocalDateTime start,
+            @RequestParam(required = false) LocalDateTime end
+    ) {
+
+        return ResponseEntity.ok(
+                flightService.getFlightHistory(
+                        aircraftId,
+                        status,
+                        start,
+                        end
+                )
+        );
+    }
+
     @PostMapping
     public ResponseEntity<Flight>
     createFlight(
             @RequestParam Long aircraftId,
-            @Valid @RequestBody Flight flight
+            @Valid @RequestBody com.flightsimulation.dto.FlightRequest flight
     ) {
 
         Flight saved =
                 flightService.createFlight(
-                        flight,
+                        flight.toEntity(),
                         aircraftId
                 );
 
@@ -67,13 +91,13 @@ public class FlightController {
     updateFlight(
             @PathVariable Long id,
             @RequestParam Long aircraftId,
-            @Valid @RequestBody Flight flight
+            @Valid @RequestBody com.flightsimulation.dto.FlightRequest flight
     ) {
 
         return ResponseEntity.ok(
                 flightService.updateFlight(
                         id,
-                        flight,
+                        flight.toEntity(),
                         aircraftId
                 )
         );
@@ -125,3 +149,4 @@ public class FlightController {
                 .build();
     }
 }
+

@@ -1,6 +1,7 @@
+import { API_BASE_URL } from "./endpoints";
 import axios from "axios";
 
-const API_URL = "http://localhost:8081/api/aircraft";
+const API_URL = `${API_BASE_URL}/aircraft`;
 
 export const getAllAircraft = async () => {
   const response = await axios.get(API_URL);

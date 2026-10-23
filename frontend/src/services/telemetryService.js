@@ -1,6 +1,8 @@
+import { getAuthorization, expireSession } from './authSession';
+import { API_BASE_URL, WS_URL } from "./endpoints";
 import { Client } from "@stomp/stompjs";
 
-const WS_URL = "ws://localhost:8081/ws";
+const API_URL = `${API_BASE_URL}/telemetry`;
 
 let stompClient = null;
 
@@ -8,126 +10,96 @@ export const connectTelemetryWebSocket = (
   onTelemetryReceived,
   flightId = 1
 ) => {
-  // Already connected/connecting
   if (stompClient?.active) {
     return stompClient;
   }
 
   const client = new Client({
     brokerURL: WS_URL,
-
+    beforeConnect: () => { client.connectHeaders = { Authorization: getAuthorization() }; },
     reconnectDelay: 5000,
-
     heartbeatIncoming: 4000,
     heartbeatOutgoing: 4000,
 
-    debug: (message) => {
-      console.log("[STOMP]", message);
-    },
-
     onConnect: () => {
-      console.log(
-        "✅ Connected to FlightSimulation WebSocket"
-      );
+      console.log("Connected to telemetry WebSocket");
 
       client.subscribe(
         `/topic/telemetry/${flightId}`,
         (message) => {
+          let telemetry;
+
           try {
-            const telemetry = JSON.parse(
-              message.body
-            );
-
-            console.log(
-              "📡 Telemetry received:",
-              telemetry
-            );
-
-            if (onTelemetryReceived) {
-              onTelemetryReceived(telemetry);
-            }
+            telemetry = JSON.parse(message.body);
           } catch (error) {
-            console.error(
-              "❌ Telemetry parse error:",
-              error
-            );
+            console.error("Invalid telemetry JSON:", error);
+            return;
+          }
+
+          if (typeof onTelemetryReceived === "function") {
+            onTelemetryReceived(telemetry);
           }
         }
-      );
-
-      console.log(
-        `📡 Subscribed to /topic/telemetry/${flightId}`
       );
     },
 
     onStompError: (frame) => {
       console.error(
-        "❌ STOMP error:",
-        frame.headers["message"]
+        "STOMP error:",
+        frame.headers["message"],
+        frame.body
       );
-
-      console.error(frame.body);
     },
 
     onWebSocketError: (error) => {
-      console.error(
-        "❌ WebSocket error:",
-        error
-      );
+      console.error("WebSocket error:", error);
     },
 
     onWebSocketClose: () => {
-      console.log(
-        "🔌 WebSocket disconnected"
-      );
+      console.log("Telemetry WebSocket disconnected");
     },
   });
 
-  // Store same instance globally
   stompClient = client;
-
   client.activate();
 
   return client;
 };
 
-export const sendTelemetry = (
-  flightId,
-  telemetry
-) => {
-  if (!stompClient?.connected) {
-    console.warn(
-      "⚠️ WebSocket is not connected."
-    );
-
-    return false;
-  }
-
-  stompClient.publish({
-    destination: `/app/telemetry/${flightId}`,
-
+// Use the backend's existing REST endpoint.
+// The backend saves the telemetry and broadcasts it over STOMP.
+export const sendTelemetry = async (flightId, telemetry) => {
+  const sentAuthorization = getAuthorization();
+  const response = await fetch(`${API_URL}/${flightId}`, {
+    method: "POST",
+    signal: AbortSignal.timeout(30000),
+    headers: {
+      "Content-Type": "application/json", Authorization: sentAuthorization,
+    },
     body: JSON.stringify(telemetry),
   });
 
-  return true;
+  if (response.status === 401) expireSession(sentAuthorization);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to save telemetry: HTTP ${response.status}`
+    );
+  }
+
+  return response.json();
 };
 
-export const disconnectTelemetryWebSocket =
-  async () => {
-    const client = stompClient;
+export const disconnectTelemetryWebSocket = async () => {
+  const client = stompClient;
+  stompClient = null;
 
-    // Clear only the current global reference
-    stompClient = null;
-
-    if (client) {
-      await client.deactivate();
-
-      console.log(
-        "🔌 WebSocket connection closed."
-      );
-    }
-  };
+  if (client) {
+    await client.deactivate();
+  }
+};
 
 export const isTelemetryConnected = () => {
   return Boolean(stompClient?.connected);
 };
+
+
