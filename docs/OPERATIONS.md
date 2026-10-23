@@ -1,58 +1,89 @@
-# Verification and local operation
+﻿# Operations
 
-Requirements: Java 21 and Node.js 22 with npm. Maven is downloaded through the committed wrapper; a separate Maven installation is unnecessary.
+## Local setup
 
-Run all local checks from the repository root:
-
-```powershell
-.\scripts\verify.ps1
-```
-
-This installs locked frontend dependencies, runs backend verify (including tests and packaging), and builds frontend assets. GitHub push/PR checks perform equivalent verification. Uploaded test reports are retained for seven days. CI has not been run on GitHub yet; branch protection must be configured in repository settings to require both jobs.
-
-For first local startup, set APP_ADMIN_PASSWORD (12�128 characters) in the terminal used to launch the backend. Existing persisted users retain their password; subsequent changes should use the account UI. Local data is stored under backend/data and must be backed up before upgrades.
+Use Java 21, Node.js 22 and npm. Maven is provided by the wrapper. From the repository root:
 
 ```powershell
 $env:APP_ADMIN_PASSWORD='<choose-a-unique-password>'
 .\start.bat
 ```
 
-Serial input is disabled by default so the application can start without ESP32 hardware. To enable it before launching, set SERIAL_ENABLED=true and FLIGHTSIMULATION_SERIAL_PORT to your actual COM port. Close Arduino Serial Monitor before starting. Stop each server in its own terminal with Ctrl+C. Do not start a second backend on port 8081.
+First startup creates admin only if missing. Passwords require at least 12 Unicode characters and at most 72 UTF-8 bytes. Existing account passwords are not reset by environment changes. Use Change password in the account bar. Local data lives in backend/data; back it up with the backend stopped before upgrading.
 
-Production is not yet ready for unattended deployment. The prod profile validates an existing PostgreSQL schema; automated migrations, restore verification, HTTPS termination, rate limits and multi-instance session revocation remain outstanding. CI compilation/tests do not verify physical hardware, browser visuals or production load.
+Frontend runs on 5173; backend on 8081. Stop the old process with Ctrl+C before starting a replacement. Do not blindly terminate an unidentified process occupying a port.
 
-## Telemetry API compatibility change
+## Configuration
 
-GET /api/telemetry/{flightId} now returns only the latest 200 samples, ordered by recordedAt then id descending. Its JSON array shape is preserved, but clients must not assume it is the full flight history. X-Result-Limit indicates the cap and Link points to the alternate /history endpoint. Use /history?page=0&size=100 and hasNext for browsing, /summary for full-flight aggregates, and /export for a complete CSV. The bundled report UI already uses pagination. The unbounded repository list query has been removed.
+| Variable | Purpose |
+| --- | --- |
+| APP_ADMIN_PASSWORD | Initial admin provisioning only |
+| APP_PROFILE | local by default; prod enables PostgreSQL migrations/validation |
+| DB_URL, DB_USERNAME, DB_PASSWORD | Production database connection |
+| FRONTEND_URL | Allowed frontend origin |
+| VITE_BACKEND_URL | Public backend origin, embedded during frontend build |
+| SERIAL_ENABLED | Enable serial input; false by default |
+| FLIGHTSIMULATION_SERIAL_PORT | Actual COM port; close Arduino Serial Monitor first |
+| PUBLIC_DOMAIN | Domain used by optional Caddy HTTPS gateway |
 
-## Readiness monitoring
+The local profile overrides database settings with H2. Select prod explicitly for PostgreSQL. Never commit real credentials. Remote HTTP Basic traffic requires HTTPS/WSS.
 
-GET /api/operations/readiness requires ADMIN authentication. A valid database connection returns 200 with status/database UP; an invalid/unavailable connection returns 503 with DOWN. The response is not cached and contains no database URL, credentials or SQL exception details. Connection validation allows two seconds after obtaining a pooled connection; pool acquisition may additionally take up to the configured Hikari connection timeout (30 seconds by default). Configure monitoring timeouts accordingly. This is a database readiness check, not an ESP32 health check or public load-balancer probe. The database must remain available for database-backed admin authentication as well; authentication may fail before this handler when the database is down.
+## Verification
 
-## Account audit trail
+```powershell
+.\scripts\verify.ps1
+```
 
-ADMIN can read GET /api/operations/audit?page=0 (50 records per page, newest first). Records include actor, action, target username and UTC creation timestamp. Bootstrap, account creation, access updates and successful password changes are recorded in the same transaction as the account change, so failed transactions do not leave success records. Passwords/hashes are not recorded. There is no audit edit/delete API. This is an application audit baseline, not tamper-proof storage: database administrators can modify records. Retention/export policies, failed-login auditing and flight/maintenance auditing remain future work. Production schema provisioning must include audit_records before startup.
+This installs locked frontend dependencies, runs backend verification/package, frontend unit tests and production build. From frontend, run `npm run test:e2e` after installing the Playwright Chromium runtime. Browser tests mock REST responses; they do not replace live full-stack verification.
 
-Audit coverage now also includes flight creation/update/start/completion/cancellation/deletion and maintenance creation/progress/completion. Targets use flight:<id> and maintenance:<id>. Records share the business transaction: rejected maintenance transitions and rolled-back concurrent flight starts produce no success entries. Tests verify maintenance actor attribution and exactly one committed FLIGHT_STARTED audit entry during a two-flight concurrency conflict. No telemetry samples or maintenance descriptions are copied into audit records.
+GitHub Actions defines backend, frontend and PostgreSQL jobs. Require the appropriate checks in branch protection. Failed browser runs upload traces/screenshots; backend test reports are also retained for seven days. See [Release acceptance](RELEASE_ACCEPTANCE.md) for actual evidence rather than assuming a configured job passed.
 
-The admin account bar now includes Operations. This panel displays database readiness, last-check time and a paginated audit trail with refresh controls. Health failures do not hide an otherwise available audit result, and audit failures show an explicit message. Requests are cancelled when the panel closes. This is an on-demand view, not continuous monitoring; refresh to check current state. Frontend policy tests and production build pass; the new panel has not been visually verified in a connected browser.
+## API contracts
 
-## Stable paginated responses
+- Telemetry GET /api/telemetry/{flightId}: latest 200 samples; X-Result-Limit and Link advertise the cap/alternate history route.
+- /api/telemetry/{flightId}/history: zero-based page, size 1–200 (default 100); content/page/size/hasNext. Concurrent inserts can shift offset pages.
+- /summary: full-flight database aggregates. /export: UTF-8 CSV, 500-row descending-ID batches, escaped metadata and formula protection. Initial maximum ID excludes later inserts; concurrent updates/deletes are not snapshot-isolated. The browser still buffers a Blob.
+- User, maintenance and audit lists: content/page/size/totalElements/totalPages/first/last, 50 records per page.
+- Validation errors return 400; missing resources 404; state/concurrency/integrity conflicts 409. Authentication/permission failures return safe JSON 401/403 without browser Basic challenge dialogs.
 
-Users, maintenance and audit list endpoints now return an explicit PageResponse DTO with content, page, size, totalElements, totalPages, first and last. Page numbers start at zero. Spring-specific pageable/sort metadata is no longer serialized. Existing frontend consumers use content/last and remain compatible. Telemetry history retains its separate content/page/size/hasNext slice contract. Unit tests cover pagination metadata, empty results and immutable content; HTTP tests verify the users wire contract.
+## Monitoring and audit
 
-Password policy clarification: new user passwords, password changes and initial admin provisioning require at least 12 Unicode characters and at most 72 UTF-8 bytes (BCrypt input limit). Multi-byte characters consume more than one byte. Existing accounts are unchanged. Server validation is authoritative; the HTML input length constraint alone cannot enforce a byte limit.
+The admin Operations panel exposes readiness and audit views on demand; use Refresh for a new check.
 
-## Request tracing
+GET /api/operations/readiness requires ADMIN. It checks database connection validity, returns UP/200 or DOWN/503 and is not cached. Validation allows two seconds after acquiring a connection; pool acquisition may take another 30 seconds. Database-backed authentication may fail before the handler when the database is unavailable. This is not an ESP32 health probe.
 
-Responses include a server-generated X-Request-ID UUID, including authentication failures. API controllers expose this header to the configured frontend origin. During synchronous request handling the same ID appears in the request field of server log entries. Provide this ID with a bug report to correlate logs; never send passwords or Authorization headers. Client-provided request IDs are ignored. MDC context is restored/cleared after handling, including failures. Async streaming worker logs do not yet propagate this context; this is request correlation, not distributed tracing.
+GET /api/operations/audit?page=0 requires ADMIN. Account bootstrap/creation/access/password changes, flight lifecycle actions and maintenance transitions are recorded with actor, action, target and UTC timestamp. Records share the business transaction; rollback removes success entries. No password values/hashes, telemetry samples or maintenance descriptions are copied. No edit/delete API exists; database administrators can still modify records. Retention, failed-login auditing and tamper-evident archival remain outstanding.
 
-## Async HTTP workers
+Responses carry server-generated X-Request-ID values, also propagated to synchronous/async request logs. Include that ID when reporting errors; do not include passwords or Authorization headers. This is local request correlation, not distributed tracing.
 
-MVC streaming now uses an explicit executor: two core threads, at most eight threads and 32 queued tasks. Async request timeout is four minutes (the browser CSV timeout is five minutes). Saturated submissions are rejected by the executor rather than creating unlimited threads; overload-specific 503 mapping/load testing remains pending. Timeout or disconnect after response headers may leave a partial CSV; retry the export. The executor propagates a captured MDC log context and restores worker context after completion/failure, so streaming logs can carry the original request ID. The full test suite, including async CSV downloads and three context propagation tests, passes. These limits require tuning against actual workload and connection-pool capacity.
+## Capacity, security and recovery limits
 
-Async capacity rejection is now mapped to 503 with Retry-After: 5 and Cache-Control: no-store when the HTTP response has not yet been committed. The error body is sanitized. Tests fill all eight worker slots and 32 queue entries, verify the next task is rejected, and verify the MVC rejection response. This is deterministic capacity testing, not a production throughput benchmark. Failures after streaming starts cannot be converted into a fresh HTTP error response.
+Async HTTP workers use two core/eight maximum threads and 32 queued tasks. Capacity rejection before response commitment returns 503 with Retry-After: 5. Async timeout is four minutes; frontend CSV timeout is five minutes, other API calls 30 seconds. Failures after response commitment may leave a partial download. Tune these limits against real workloads.
 
-Authentication/authorization failures now return application/json with an error field and Cache-Control: no-store. Missing or invalid credentials use the same generic 401 message; permission denials return 403 without revealing internal authority details. Responses intentionally omit the Basic challenge header to avoid browser-native password dialogs; clients should use the application sign-in form and send explicit Authorization headers. Three HTTP tests verify these contracts. The existing request ID filter still adds correlation headers.
+Authentication failure throttling tracks source IPs in the local process: ten failed Basic-authenticated API calls within a minute trigger 429; at most 10,000 sources are retained. Forwarded headers are not trusted. Behind a proxy clients may share an IP; configure edge throttling before exposure. Socket revocation is also local-process only.
 
-Audit security verification now covers anonymous/viewer/operator read denial, admin listing, absence of a delete endpoint, rejected-account-update behavior and real transaction rollback. The rollback test confirms both the new account and its success audit record disappear together after rollback. Five new integration tests pass against isolated H2 storage. Database administrators still retain direct modification privileges; external tamper-evident archival is not implemented.
+## Hardware
+
+Enable serial input and set the real COM port. The reader retries unavailable ports every three seconds and rejects frames over 4096 characters or invalid/non-finite values. Telemetry pages mark retained data stale after ten seconds without a packet. Freshness does not establish device authenticity. Physical acceptance is tracked in [Release acceptance](RELEASE_ACCEPTANCE.md).
+
+## Staging deployment
+
+Build backend JAR and frontend assets first. Set VITE_BACKEND_URL and FRONTEND_URL to the HTTPS public origin; set DB_PASSWORD, initial APP_ADMIN_PASSWORD and PUBLIC_DOMAIN through the invoking environment.
+
+From deploy:
+
+```powershell
+docker compose -f compose.yaml -f https.compose.yaml up --build -d
+```
+
+The database is not host-published; the backend binds loopback. Ports 80/443 and correct DNS are needed for Caddy certificate provisioning. These are operator instructions, not evidence that deployment has occurred.
+
+Production runs Flyway V1 then Hibernate validate, with automatic baseline and clean disabled. Back up and compare existing schemas before deliberately baselining. Do not enable automatic baseline to bypass migration errors. Local Flyway is disabled to preserve existing development databases.
+
+## Backup, restore and load checks
+
+Use deploy/backup.ps1 with a new destination filename. Use deploy/restore-drill.ps1 with that backup to restore into a new timestamped database; it retains the drill database and never overwrites existing databases. Verify counts, admin login and reports before declaring recovery successful.
+
+scripts/load-smoke.mjs runs 50 read-only readiness requests at concurrency five. Supply LOAD_TEST_BASE_URL, LOAD_TEST_USERNAME and LOAD_TEST_PASSWORD via environment variables. It rejects plaintext remote targets and reports failure count/p50/p95. This is not a representative telemetry/load benchmark.
+
+Completed and pending verification belongs in [Release acceptance](RELEASE_ACCEPTANCE.md).
