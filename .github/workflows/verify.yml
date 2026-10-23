@@ -50,6 +50,13 @@ jobs:
       - name: Browser smoke tests
         working-directory: frontend
         run: npm run test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: frontend/test-results/
+          retention-days: 7
       - name: Build frontend
         working-directory: frontend
         run: npm run build
@@ -87,4 +94,5 @@ jobs:
       - name: Verify concurrent flight starts on PostgreSQL
         working-directory: backend
         run: bash mvnw --batch-mode -Dtest=FlightConcurrencyTest test
+
 

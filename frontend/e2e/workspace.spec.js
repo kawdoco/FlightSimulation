@@ -41,7 +41,11 @@ test('maintenance creates and completes a work order',async({page})=>{
   return route.fulfill({json:{content:records,last:true}});
  });
  await page.goto('/maintenance');await page.getByLabel('Password',{exact:true}).fill('TestOnlyPassword2026!');await page.getByRole('button',{name:'Sign in to workspace'}).click();
- await page.getByLabel('Aircraft',{exact:true}).selectOption('1');await page.getByLabel('Work description').fill('Inspect controls');await page.getByRole('button',{name:'Create record'}).click();
+ const aircraftSelect=page.getByRole('combobox',{name:'Aircraft',exact:true});
+ await expect(aircraftSelect).toBeEnabled();
+ await expect(aircraftSelect.locator('option[value="1"]')).toHaveText('TEST-001');
+ await aircraftSelect.selectOption('1');await page.getByLabel('Work description').fill('Inspect controls');await page.getByRole('button',{name:'Create record'}).click();
  await page.getByRole('button',{name:'Start work'}).click();await page.getByRole('button',{name:'Complete work'}).click();await expect(page.getByRole('cell',{name:'COMPLETED',exact:true})).toBeVisible();
 });
+
 
