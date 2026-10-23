@@ -1,461 +1,230 @@
-#include <Wire.h>
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <WiFiUdp.h>
+#include <stdio.h>
+#include <string.h>
 
-// Set these values for the Wi-Fi network and computer running Spring Boot.
-const char* WIFI_SSID = "Test - Student";
-const char* WIFI_PASSWORD = "BCI#campus";
-const char* BACKEND_URL = "http://192.168.28.22:8081/api/telemetry/1";
+// Status lines are ignored by the backend; telemetry remains JSON.
+#define SERIAL_DIAGNOSTICS 1
 
-// ==========================================
-// FlightSimulation IoT Controller
-// MPU6050 + HC-SR04 + B10K + HW-504
-// ==========================================
+// Fill in the same 2.4 GHz Wi-Fi credentials in both ESP32 sketches.
+const char* WIFI_SSID = "Iphone 16";
+const char* WIFI_PASSWORD = "1234abcd";
 
-// ---------- MPU6050 ----------
-Adafruit_MPU6050 mpu;
+constexpr uint16_t UDP_PORT = 4210;
+constexpr uint32_t COMMAND_INTERVAL_MS = 50;
+constexpr int JOY_X_PIN = 34;
+constexpr int JOY_Y_PIN = 35;
+constexpr int JOY_SW_PIN = 27;
+constexpr int THROTTLE_PIN = 32;
 
-// ---------- Ultrasonic ----------
-#define TRIG_PIN 14
-#define ECHO_PIN 12
-
-// ---------- Throttle ----------
-#define THROTTLE_PIN 32
-
-// ---------- HW-504 Joystick ----------
-#define JOY_X_PIN 34
-#define JOY_Y_PIN 35
-#define JOY_SW_PIN 27
-
-// Heading value
-float heading = 0.0;
+WiFiUDP udp;
 int joystickCenterX = 2048;
-float pitchOffset = 0.0;
-float rollOffset = 0.0;
-float filteredPitch = 0.0;
-float filteredRoll = 0.0;
-unsigned long lastTelemetrySentAt = 0;
-
-void readMpuAttitude(float& pitch, float& roll) {
-  sensors_event_t accel;
-  sensors_event_t gyro;
-  sensors_event_t temp;
-
-  mpu.getEvent(&accel, &gyro, &temp);
-
-  pitch = atan2(
-    accel.acceleration.y,
-    sqrt(
-      accel.acceleration.x * accel.acceleration.x +
-      accel.acceleration.z * accel.acceleration.z
-    )
-  ) * 180.0 / PI;
-
-  roll = atan2(
-    -accel.acceleration.x,
-    accel.acceleration.z
-  ) * 180.0 / PI;
-}
-
-void calibrateMpuLevel() {
-  const int sampleCount = 100;
-  float pitchTotal = 0.0;
-  float rollTotal = 0.0;
-
-  Serial.println("Keep the aircraft/controller still: calibrating MPU level...");
-  for (int sample = 0; sample < sampleCount; sample++) {
-    float pitch;
-    float roll;
-    readMpuAttitude(pitch, roll);
-    pitchTotal += pitch;
-    rollTotal += roll;
-    delay(10);
-  }
-
-  pitchOffset = pitchTotal / sampleCount;
-  rollOffset = rollTotal / sampleCount;
-  Serial.print("MPU level reference: pitch=");
-  Serial.print(pitchOffset, 1);
-  Serial.print(" roll=");
-  Serial.println(rollOffset, 1);
-}
-
-void calibrateJoystickCenter() {
-  const int sampleCount = 100;
-  long total = 0;
-
-  Serial.println("Keep the joystick centered: calibrating joystick...");
-  for (int sample = 0; sample < sampleCount; sample++) {
-    total += analogRead(JOY_X_PIN);
-    delay(5);
-  }
-
-  joystickCenterX = total / sampleCount;
-  Serial.print("Joystick X center: ");
-  Serial.println(joystickCenterX);
-}
+int joystickCenterY = 2048;
+uint32_t lastCommandSentAt = 0;
+uint32_t lastWiFiAttemptAt = 0;
+uint32_t lastDiagnosticsAt = 0;
+uint32_t controlPacketsSent = 0;
+uint32_t telemetryPacketsReceived = 0;
+bool wifiWasConnected = false;
 
 void connectToWiFi() {
-  if (WiFi.status() == WL_CONNECTED) {
-    return;
-  }
-
-  Serial.print("Connecting to Wi-Fi");
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  unsigned long startedAt = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - startedAt < 15000) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Wi-Fi connected. ESP32 IP: ");
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println("Wi-Fi connection failed; retrying in the next loop");
-  }
+  lastWiFiAttemptAt = millis();
+#if SERIAL_DIAGNOSTICS
+  Serial.printf("Connecting to Wi-Fi network \"%s\".\n", WIFI_SSID);
+#endif
 }
 
-void sendTelemetry(float altitude, float speed, float pitch, float roll,
-                   float currentHeading, int throttle, float fuel) {
-  if (WiFi.status() != WL_CONNECTED) {
+void keepWiFiConnected() {
+  if (WiFi.status() == WL_CONNECTED) {
     return;
   }
 
-  HTTPClient http;
-  http.begin(BACKEND_URL);
-  http.addHeader("Content-Type", "application/json");
-
-  String payload = "{";
-  payload += "\"altitude\":" + String(altitude, 2) + ",";
-  payload += "\"speed\":" + String(speed, 2) + ",";
-  payload += "\"pitch\":" + String(pitch, 2) + ",";
-  payload += "\"roll\":" + String(roll, 2) + ",";
-  payload += "\"heading\":" + String(currentHeading, 2) + ",";
-  payload += "\"throttle\":" + String(throttle) + ",";
-  payload += "\"fuel\":" + String(fuel, 2);
-  payload += "}";
-
-  int statusCode = http.POST(payload);
-  Serial.print("Telemetry POST status: ");
-  Serial.println(statusCode);
-  if (statusCode < 0) {
-    Serial.println(http.errorToString(statusCode));
+  if (millis() - lastWiFiAttemptAt >= 5000) {
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    lastWiFiAttemptAt = millis();
+#if SERIAL_DIAGNOSTICS
+    Serial.println("Wi-Fi reconnect attempt.");
+#endif
   }
-  http.end();
 }
 
-// ==========================================
-// Read HC-SR04 Distance
-// ==========================================
-
-float readDistanceCM() {
-
-  digitalWrite(TRIG_PIN, LOW);
-  delayMicroseconds(2);
-
-  digitalWrite(TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-
-  digitalWrite(TRIG_PIN, LOW);
-
-  long duration = pulseIn(
-    ECHO_PIN,
-    HIGH,
-    30000
-  );
-
-  if (duration == 0) {
-    return -1;
+int calibrateAxis(int pin) {
+  long total = 0;
+  for (int sample = 0; sample < 100; sample++) {
+    total += analogRead(pin);
+    delay(5);
   }
-
-  float distance =
-    duration * 0.0343 / 2.0;
-
-  return distance;
+  return total / 100;
 }
 
-// ==========================================
-// Joystick dead-zone function
-// ==========================================
+float readJoystickAxis(int pin, int center) {
+  const int deadZone = 280;
+  const int value = analogRead(pin);
+  const int difference = value - center;
 
-float normalizeJoystick(int value) {
-
-  const int deadZone = 650;
-
-  int difference = value - joystickCenterX;
-
-  if (abs(difference) < deadZone) {
-    return 0.0;
+  if (abs(difference) <= deadZone) {
+    return 0.0f;
   }
 
-  float normalized =
-    (float)difference / 2048.0;
+  const int usableDifference =
+      difference > 0 ? difference - deadZone : difference + deadZone;
+  const int usableRange =
+      difference > 0 ? 4095 - center - deadZone : center - deadZone;
 
-  if (normalized > 1.0) {
-    normalized = 1.0;
+  if (usableRange <= 0) {
+    return 0.0f;
   }
-
-  if (normalized < -1.0) {
-    normalized = -1.0;
-  }
-
-  return normalized;
+  return constrain(static_cast<float>(usableDifference) / usableRange, -1.0f, 1.0f);
 }
 
-// ==========================================
-// SETUP
-// ==========================================
+void sendControlPacket() {
+  const float stickX = readJoystickAxis(JOY_X_PIN, joystickCenterX);
+  const float stickY = readJoystickAxis(JOY_Y_PIN, joystickCenterY);
+  const int throttle = map(analogRead(THROTTLE_PIN), 0, 4095, 0, 100);
+  const int buttonPressed = digitalRead(JOY_SW_PIN) == LOW ? 1 : 0;
 
-void setup() {
+  char packet[64];
+  snprintf(
+      packet,
+      sizeof(packet),
+      "C,%.3f,%.3f,%d,%d",
+      stickX,
+      stickY,
+      throttle,
+      buttonPressed
+  );
 
-  Serial.begin(115200);
-
-  delay(1000);
-
-  connectToWiFi();
-
-  Serial.println();
-  Serial.println("==============================");
-  Serial.println("FlightSimulation IoT Starting");
-  Serial.println("==============================");
-
-  // --------------------------
-  // I2C
-  // --------------------------
-
-  Wire.begin(21, 22);
-
-  // --------------------------
-  // MPU6050
-  // --------------------------
-
-  if (!mpu.begin()) {
-
-    Serial.println("ERROR: MPU6050 not detected!");
-
-    while (1) {
-      delay(100);
-    }
+  udp.beginPacket(IPAddress(255, 255, 255, 255), UDP_PORT);
+  udp.write(reinterpret_cast<const uint8_t*>(packet), strlen(packet));
+  const int sent = udp.endPacket();
+#if SERIAL_DIAGNOSTICS
+  if (sent != 1) {
+    Serial.println("ERROR: UDP control packet send failed.");
+  } else {
+    controlPacketsSent++;
   }
-
-  Serial.println("MPU6050 Connected");
-
-  mpu.setAccelerometerRange(
-    MPU6050_RANGE_8_G
-  );
-
-  mpu.setGyroRange(
-    MPU6050_RANGE_500_DEG
-  );
-
-  mpu.setFilterBandwidth(
-    MPU6050_BAND_21_HZ
-  );
-
-  calibrateMpuLevel();
-
-  // --------------------------
-  // HC-SR04
-  // --------------------------
-
-  pinMode(
-    TRIG_PIN,
-    OUTPUT
-  );
-
-  pinMode(
-    ECHO_PIN,
-    INPUT
-  );
-
-  // --------------------------
-  // Joystick
-  // --------------------------
-
-  pinMode(
-    JOY_SW_PIN,
-    INPUT_PULLUP
-  );
-
-  // ESP32 ADC 0 - 4095
-  analogReadResolution(12);
-
-  calibrateJoystickCenter();
-
-  Serial.println("All sensors initialized");
-  Serial.println();
+#endif
 }
 
-// ==========================================
-// LOOP
-// ==========================================
-
-void loop() {
-
-  // ========================================
-  // 1. MPU6050
-  // ========================================
-
+void emitTelemetryJson(const char* packet) {
+  float altitude;
+  float speed;
   float pitch;
   float roll;
-  readMpuAttitude(pitch, roll);
-  pitch -= pitchOffset;
-  roll -= rollOffset;
-  pitch = constrain(pitch, -45.0, 45.0);
-  roll = constrain(roll, -45.0, 45.0);
+  float heading;
+  float throttle;
+  float fuel;
 
-  // Smooth accelerometer noise so the aircraft does not jitter at rest.
-  filteredPitch = filteredPitch * 0.85 + pitch * 0.15;
-  filteredRoll = filteredRoll * 0.85 + roll * 0.15;
-
-  if (fabs(filteredPitch) < 0.5) filteredPitch = 0.0;
-  if (fabs(filteredRoll) < 0.5) filteredRoll = 0.0;
-
-  // ========================================
-  // 2. B10K THROTTLE
-  // ========================================
-
-  int throttleRaw =
-    analogRead(THROTTLE_PIN);
-
-  int throttle =
-    map(
-      throttleRaw,
-      0,
-      4095,
-      0,
-      100
-    );
-
-  throttle =
-    constrain(
-      throttle,
-      0,
-      100
-    );
-
-  // ========================================
-  // 3. HW-504 JOYSTICK
-  // ========================================
-
-  int joystickX =
-    analogRead(JOY_X_PIN);
-
-  int joystickY =
-    analogRead(JOY_Y_PIN);
-
-  bool joystickButton =
-    digitalRead(JOY_SW_PIN) == LOW;
-
-  float yawInput =
-    normalizeJoystick(
-      joystickX
-    );
-
-  // Heading slowly changes
-  // according to joystick direction
-
-  // Do not change heading while the joystick is at its calibrated center.
-  if (fabs(yawInput) > 0.2) {
-    heading += yawInput * 2.0;
+  if (sscanf(
+          packet,
+          "T,%f,%f,%f,%f,%f,%f,%f",
+          &altitude,
+          &speed,
+          &pitch,
+          &roll,
+          &heading,
+          &throttle,
+          &fuel
+      ) != 7) {
+#if SERIAL_DIAGNOSTICS
+    Serial.println("ERROR: Telemetry packet format is invalid.");
+#endif
+    return;
   }
 
-  // Keep heading 0 - 359
-
-  if (heading >= 360.0) {
-    heading -= 360.0;
-  }
-
-  if (heading < 0.0) {
-    heading += 360.0;
-  }
-
-  // ========================================
-  // 4. HC-SR04
-  // ========================================
-
-  float distance =
-    readDistanceCM();
-
-  // ========================================
-  // SERIAL OUTPUT
-  // ========================================
-
-  Serial.println(
-    "------------------------------------"
+  // Keep USB serial output machine-readable for the Spring Boot serial listener.
+  Serial.printf(
+      "{\"altitude\":%.2f,\"speed\":%.2f,\"pitch\":%.2f,"
+      "\"roll\":%.2f,\"heading\":%.2f,\"throttle\":%.0f,\"fuel\":%.1f}\n",
+      max(0.0f, altitude),
+      max(0.0f, speed),
+      pitch,
+      roll,
+      constrain(heading, 0.0f, 360.0f),
+      constrain(throttle, 0.0f, 100.0f),
+      constrain(fuel, 0.0f, 100.0f)
   );
+}
 
-  Serial.print("Pitch      : ");
-  Serial.print(pitch, 1);
-  Serial.println(" deg");
-
-  Serial.print("Roll       : ");
-  Serial.print(roll, 1);
-  Serial.println(" deg");
-
-  Serial.print("Heading    : ");
-  Serial.print(heading, 1);
-  Serial.println(" deg");
-
-  Serial.print("Throttle   : ");
-  Serial.print(throttle);
-  Serial.println(" %");
-
-  Serial.print("Joystick X : ");
-  Serial.println(joystickX);
-
-  Serial.print("Joystick Y : ");
-  Serial.println(joystickY);
-
-  Serial.print("Joystick SW: ");
-
-  if (joystickButton) {
-    Serial.println("PRESSED");
-  } else {
-    Serial.println("RELEASED");
+void receivePlaneTelemetry() {
+  int packetSize = udp.parsePacket();
+  while (packetSize > 0) {
+    char packet[128];
+    const int bytesRead = udp.read(packet, sizeof(packet) - 1);
+    if (bytesRead > 0) {
+      packet[bytesRead] = '\0';
+      if (packet[0] == 'T' && packet[1] == ',') {
+        telemetryPacketsReceived++;
+        emitTelemetryJson(packet);
+#if SERIAL_DIAGNOSTICS
+      } else {
+        Serial.println("WARNING: Received an invalid telemetry packet.");
+#endif
+      }
+    }
+    packetSize = udp.parsePacket();
   }
+}
 
-  Serial.print("Distance   : ");
+void setup() {
+  Serial.begin(115200);
+  delay(300);
+#if SERIAL_DIAGNOSTICS
+  Serial.println("Controller starting; waiting for Wi-Fi and plane telemetry.");
+#endif
+  analogReadResolution(12);
+  pinMode(JOY_SW_PIN, INPUT_PULLUP);
 
-  if (distance < 0) {
+  // Keep the joystick centered while the controller powers up.
+  joystickCenterX = calibrateAxis(JOY_X_PIN);
+  joystickCenterY = calibrateAxis(JOY_Y_PIN);
 
-    Serial.println(
-      "No reading"
+  connectToWiFi();
+  udp.begin(UDP_PORT);
+}
+
+void loop() {
+  keepWiFiConnected();
+  const bool wifiConnected = WiFi.status() == WL_CONNECTED;
+#if SERIAL_DIAGNOSTICS
+  if (wifiConnected != wifiWasConnected) {
+    if (wifiConnected) {
+      Serial.printf("Wi-Fi connected. Controller IP: %s\n",
+                    WiFi.localIP().toString().c_str());
+    } else {
+      Serial.println("Wi-Fi disconnected; reconnecting.");
+    }
+  }
+#endif
+  wifiWasConnected = wifiConnected;
+  receivePlaneTelemetry();
+
+  if (millis() - lastDiagnosticsAt >= 2000) {
+#if SERIAL_DIAGNOSTICS
+    Serial.printf(
+        "UDP status: controller IP=%s, sent=%lu, telemetry received=%lu\n",
+        WiFi.localIP().toString().c_str(),
+        static_cast<unsigned long>(controlPacketsSent),
+        static_cast<unsigned long>(telemetryPacketsReceived)
     );
-
-  } else {
-
-    Serial.print(distance, 1);
-    Serial.println(" cm");
+    if (!wifiConnected) {
+      Serial.printf("Waiting for 2.4 GHz Wi-Fi; connection status=%d\n", WiFi.status());
+    } else if (telemetryPacketsReceived == 0) {
+      Serial.println("Waiting for plane telemetry; check plane power, MPU6050 and UDP connectivity.");
+    }
+#endif
+    lastDiagnosticsAt = millis();
   }
 
-  // ========================================
-  // PROXIMITY WARNING
-  // ========================================
-
-  if (
-    distance > 0 &&
-    distance < 30
-  ) {
-
-    Serial.println(
-      "*** GROUND PROXIMITY WARNING ***"
-    );
+  if (wifiConnected
+      && millis() - lastCommandSentAt >= COMMAND_INTERVAL_MS) {
+    sendControlPacket();
+    lastCommandSentAt = millis();
   }
 
-  // The ultrasonic distance is used as the simulated altitude. The backend
-  // broadcasts this POST to the frontend WebSocket subscribers.
-  if (millis() - lastTelemetrySentAt >= 1000) {
-    float altitude = distance > 0 ? distance : 0;
-    float speed = throttle * 3.0;
-    sendTelemetry(altitude, speed, filteredPitch, filteredRoll, heading, throttle, 100.0);
-    lastTelemetrySentAt = millis();
-  }
-
-  delay(200);
+  delay(2);
 }

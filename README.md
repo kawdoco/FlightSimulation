@@ -2,7 +2,7 @@
 
 **FlightSimulation** is a full-stack **Enterprise Application Development (EAD)** project that combines an interactive web-based aircraft flight simulation, real-time telemetry monitoring, enterprise management features, and IoT-based physical flight controls.
 
-The system uses **React** and **Three.js** for the interactive 3D flight environment, **Java Spring Boot** for the enterprise backend, **MySQL** for persistent data management, and an **ESP32-based IoT controller** for real-time aircraft control and sensor integration.
+The system uses **React** and **Three.js** for the interactive 3D flight environment, **Java Spring Boot** for the enterprise backend, **MySQL** for persistent data management, and two ESP32 boards for real-time aircraft control and sensor integration.
 
 ---
 
@@ -15,9 +15,10 @@ The platform combines traditional enterprise application functionality with real
 ### Main Data Flow
 
 ```text
-ESP32 IoT Controller
-        │
-        │ Sensor / Control Data
+Controller ESP32 ──UDP──> Plane ESP32
+        ▲                    │
+        └────── UDP ─────────┘
+        │ USB Serial (JSON telemetry)
         ▼
 Spring Boot Backend
         │
@@ -136,31 +137,28 @@ FlightSimulation can generate warnings for abnormal operating conditions, includ
 
 FlightSimulation integrates an **ESP32-based physical flight controller** with the web application.
 
-The controller collects physical control inputs and sensor readings and sends them to the backend for processing. The processed data is then transmitted to the frontend and reflected in the Three.js aircraft simulation.
+The controller ESP32 reads joystick/throttle input and sends commands to the plane ESP32 over UDP. The plane ESP32 moves the two servos and returns MPU6050/ultrasonic readings. The controller sends the telemetry to Spring Boot over USB serial; Spring Boot saves and broadcasts it to the frontend for the Three.js simulation.
 
 ### IoT Components
 
 | Component     | Purpose                              |
 | ------------- | ------------------------------------ |
-| ESP32         | Main IoT microcontroller             |
-| MPU6050       | Motion, pitch, and roll detection    |
-| Joystick      | Aircraft directional control         |
-| BMP280        | Atmospheric pressure and temperature |
-| Potentiometer | Throttle control                     |
-| Push Buttons  | Additional aircraft controls         |
-| LEDs          | Controller and aircraft status       |
-| Buzzer        | Warning indication                   |
+| Controller ESP32 | Reads joystick/throttle and relays telemetry by USB serial |
+| Plane ESP32      | Reads MPU6050/ultrasonic sensor and drives two servos       |
+| HW-504 joystick  | Commands the plane pitch and roll servos                   |
+| MPU6050          | Measures plane pitch, roll, and gyro heading               |
+| HC-SR04          | Supplies distance for the simulator altitude               |
+| B10K potentiometer | Controls throttle and simulated speed                    |
 
 ### IoT Communication Flow
 
 ```text
-Physical Controls / Sensors
-           │
-           ▼
-         ESP32
-           │
-           │ IoT Communication
-           ▼
+┌───────────────────────────┐       UDP       ┌───────────────────────────┐
+│    Controller ESP32       │<───────────────>│        Plane ESP32        │
+│ Joystick | Throttle       │                 │ Servos | MPU6050 | HC-SR04│
+└─────────────┬─────────────┘                 └───────────────────────────┘
+              │ USB Serial (JSON telemetry)
+              ▼
    Spring Boot Backend
            │
            ▼
@@ -206,14 +204,13 @@ Physical Controls / Sensors
 
 ### IoT
 
-* ESP32
+* Two ESP32 boards (controller and plane)
+* ESP32Servo
 * MPU6050
-* BMP280
-* Joystick Module
-* Potentiometer
-* Push Buttons
-* LEDs
-* Buzzer
+* HC-SR04 ultrasonic sensor
+* HW-504 joystick
+* Two servos
+* B10K potentiometer
 
 ### Development Tools
 
@@ -230,15 +227,11 @@ Physical Controls / Sensors
 ## 🏗️ System Architecture
 
 ```text
-┌───────────────────────────┐
-│    IoT Flight Controller  │
-│          ESP32            │
-│                           │
-│ Joystick | MPU6050        │
-│ BMP280   | Throttle       │
-└─────────────┬─────────────┘
-              │
-              │ IoT Data
+┌───────────────────────────┐       UDP       ┌───────────────────────────┐
+│    Controller ESP32       │<───────────────>│        Plane ESP32        │
+│ Joystick | Throttle       │                 │ Servos | MPU6050 | HC-SR04│
+└─────────────┬─────────────┘                 └───────────────────────────┘
+              │ USB Serial (JSON telemetry)
               ▼
 ┌───────────────────────────┐
 │    Spring Boot Backend    │
@@ -389,4 +382,3 @@ main
       ├── feature/maintenance-alerts
       └── feature/iot-integration
 ```
-

@@ -221,7 +221,7 @@ const FlightSimulator = ({
           <Canvas
             shadows={settings.shadows}
             dpr={[1, settings.dpr]}
-            frameloop={Number(telemetry.speed) > 0 ? "always" : "demand"}
+            frameloop={controlMode === "iot" || Number(telemetry.speed) > 0 ? "always" : "demand"}
             gl={{ antialias: false, powerPreference: 'high-performance' }}
             camera={{
               position: [0, 5, 15],
@@ -239,7 +239,7 @@ const FlightSimulator = ({
 
       {controlMode === "keyboard" ? <div className="controls-strip" aria-label="Keyboard controls">
         {[["W", "S", "Pitch"], ["A", "D", "Roll"], ["Q", "E", "Heading"], ["↑", "↓", "Throttle"], ["R", null, "Level aircraft"]].map(([first, second, label]) => <div className="control-hint" key={label}><kbd>{first}</kbd>{second && <kbd>{second}</kbd>}<span>{label}</span></div>)}
-      </div> : <div className="controls-strip iot-hint"><Icon name="info" />Aircraft controls follow incoming backend telemetry. Keyboard controls are paused.</div>}
+      </div> : <div className="controls-strip iot-hint"><Icon name="info" />Tilt the MPU6050 to change pitch and roll. Rotate it to change heading. Throttle controls forward speed. Keep the sensor level when powering on to calibrate.</div>}
       <TelemetryPanel telemetry={telemetry} />
     </>
   );

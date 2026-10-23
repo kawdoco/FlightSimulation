@@ -2,14 +2,13 @@ package com.flightsimulation.controller;
 
 import com.flightsimulation.entity.Telemetry;
 import com.flightsimulation.service.TelemetryService;
+import com.flightsimulation.service.TelemetryIngestionService;
 
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -22,14 +21,14 @@ import java.util.Map;
 public class TelemetryController {
 
     private final TelemetryService telemetryService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final TelemetryIngestionService telemetryIngestionService;
 
     public TelemetryController(
             TelemetryService telemetryService,
-            SimpMessagingTemplate messagingTemplate
+            TelemetryIngestionService telemetryIngestionService
     ) {
         this.telemetryService = telemetryService;
-        this.messagingTemplate = messagingTemplate;
+        this.telemetryIngestionService = telemetryIngestionService;
     }
 
     // ==========================================
@@ -42,16 +41,7 @@ public class TelemetryController {
             @Valid @RequestBody Telemetry telemetry
     ) {
 
-        Telemetry saved =
-                telemetryService.saveTelemetry(
-                        flightId,
-                        telemetry
-                );
-
-        messagingTemplate.convertAndSend(
-                "/topic/telemetry/" + flightId,
-                saved
-        );
+        Telemetry saved = telemetryIngestionService.saveAndBroadcast(flightId, telemetry);
 
         return ResponseEntity.ok(saved);
     }

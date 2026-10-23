@@ -2,6 +2,7 @@ package com.flightsimulation.service;
 
 import com.flightsimulation.entity.Flight;
 import com.flightsimulation.entity.Telemetry;
+import com.flightsimulation.exception.ResourceNotFoundException;
 import com.flightsimulation.repository.FlightRepository;
 import com.flightsimulation.repository.TelemetryRepository;
 
@@ -33,7 +34,7 @@ public class TelemetryService {
         Flight flight = flightRepository
                 .findById(flightId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Flight not found with id: " + flightId
                         )
                 );

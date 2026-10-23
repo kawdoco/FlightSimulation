@@ -74,7 +74,7 @@ function App() {
     useState(initialTelemetry);
   const [hasReceivedTelemetry, setHasReceivedTelemetry] =
     useState(false);
-  const [controlMode, setControlMode] = useState("keyboard");
+  const [controlMode, setControlMode] = useState("iot");
 
   const initialHeading = useRef(null);
 

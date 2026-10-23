@@ -61,8 +61,8 @@ const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
 
     const pitchDegrees = THREE.MathUtils.clamp(
       numeric(telemetry.pitch),
-      -30,
-      30
+      -45,
+      45
     );
 
     const rollDegrees = THREE.MathUtils.clamp(
