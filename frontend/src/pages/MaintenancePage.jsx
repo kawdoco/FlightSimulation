@@ -31,9 +31,9 @@ export default function MaintenancePage() {
   <form className="notice-card" onSubmit={e=>{e.preventDefault();action(async()=>{
    await axios.post(endpoint,{aircraftId:Number(aircraftId),description});setDescription('');
   });}}>
-   <label>Aircraft <select required value={aircraftId} onChange={e=>setAircraftId(e.target.value)} disabled={busy||loading}>
+   <label htmlFor="maintenance-aircraft">Aircraft</label><select id="maintenance-aircraft" required value={aircraftId} onChange={e=>setAircraftId(e.target.value)} disabled={busy||loading}>
     <option value="">Select aircraft</option>{aircraft.map(a=><option key={a.id} value={a.id}>{a.registrationNumber}</option>)}
-   </select></label>
+   </select>
    <label>Work description <textarea required maxLength={1000} value={description} onChange={e=>setDescription(e.target.value)} disabled={busy}/></label>
    <button disabled={busy||loading||!description.trim()||!aircraftId}>Create record</button>
   </form>
@@ -46,3 +46,4 @@ export default function MaintenancePage() {
   </>}
  </section>;
 }
+
