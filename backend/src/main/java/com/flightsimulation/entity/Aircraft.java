@@ -9,8 +9,12 @@ import jakarta.validation.constraints.Positive;
 @Table(name = "aircraft")
 public class Aircraft {
 
+    @Version
+    private Long version;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private Long id;
 
     @NotBlank(message = "Registration number is required")
@@ -132,3 +136,4 @@ public class Aircraft {
         this.maxAltitude = maxAltitude;
     }
 }
+

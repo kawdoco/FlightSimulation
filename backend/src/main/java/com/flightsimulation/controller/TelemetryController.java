@@ -17,7 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/telemetry")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${app.frontend.url}", exposedHeaders = "X-Request-ID")
 public class TelemetryController {
 
     private final TelemetryService telemetryService;
@@ -38,10 +38,10 @@ public class TelemetryController {
     @PostMapping("/{flightId}")
     public ResponseEntity<Telemetry> saveTelemetry(
             @PathVariable Long flightId,
-            @Valid @RequestBody Telemetry telemetry
+            @Valid @RequestBody com.flightsimulation.dto.TelemetryRequest telemetry
     ) {
 
-        Telemetry saved = telemetryIngestionService.saveAndBroadcast(flightId, telemetry);
+        Telemetry saved = telemetryIngestionService.saveAndBroadcast(flightId, telemetry.toEntity());
 
         return ResponseEntity.ok(saved);
     }
@@ -50,20 +50,23 @@ public class TelemetryController {
     // Get Telemetry By Flight
     // ==========================================
 
+    @GetMapping("/{flightId}/history")
+    public TelemetryService.HistoryPage history(@PathVariable Long flightId,
+            @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="100") int size) {
+        return telemetryService.getHistory(flightId,page,size);
+    }
+
     @GetMapping("/{flightId}")
     public ResponseEntity<List<Telemetry>>
     getTelemetry(
             @PathVariable Long flightId
     ) {
 
-        return ResponseEntity.ok(
-                telemetryService
-                        .getTelemetryByFlight(
-                                flightId
-                        )
-        );
+        return ResponseEntity.ok()
+                .header("X-Result-Limit", "200")
+                .header(HttpHeaders.LINK,"</api/telemetry/" + flightId + "/history>; rel=\"alternate\"")
+                .body(telemetryService.getTelemetryByFlight(flightId));
     }
-
     // ==========================================
     // Sprint 2 - Telemetry Summary
     // ==========================================
@@ -90,12 +93,12 @@ public class TelemetryController {
             value = "/{flightId}/export",
             produces = "text/csv"
     )
-    public ResponseEntity<String>
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody>
     exportTelemetry(
             @PathVariable Long flightId
     ) {
 
-        String csv =
+        var csv =
                 telemetryService
                         .exportTelemetryToCsv(
                                 flightId
@@ -116,3 +119,7 @@ public class TelemetryController {
                 .body(csv);
     }
 }
+
+
+
+

@@ -1,6 +1,7 @@
+import { API_BASE_URL } from "./endpoints";
 import axios from "axios";
 
-const API_URL = "http://localhost:8081/api/flights";
+const API_URL = `${API_BASE_URL}/flights`;
 
 export const getFlightHistory = async ({
   aircraftId,

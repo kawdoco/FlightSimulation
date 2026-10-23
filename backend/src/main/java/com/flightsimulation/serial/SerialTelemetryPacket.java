@@ -14,4 +14,11 @@ public record SerialTelemetryPacket(
         @NotNull @DecimalMin("0.0") @DecimalMax("100.0") Double throttle,
         @NotNull @DecimalMin("0.0") @DecimalMax("100.0") Double fuel
 ) {
+    @jakarta.validation.constraints.AssertTrue(message="Telemetry values must be finite")
+    public boolean isFinite() {
+        for(Double value : new Double[]{altitude,speed,pitch,roll,heading,throttle,fuel})
+            if(value != null && !Double.isFinite(value)) return false;
+        return true;
+    }
 }
+

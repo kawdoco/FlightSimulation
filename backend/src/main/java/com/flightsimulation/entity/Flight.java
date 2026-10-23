@@ -9,8 +9,12 @@ import java.time.LocalDateTime;
 @Table(name = "flights")
 public class Flight {
 
+    @Version
+    private Long version;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private Long id;
 
     @NotBlank
@@ -29,9 +33,11 @@ public class Flight {
     private LocalDateTime scheduledTime;
 
     @Column(name = "start_time")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private LocalDateTime startTime;
 
     @Column(name = "end_time")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private LocalDateTime endTime;
 
     @Column(nullable = false)
@@ -116,3 +122,4 @@ public class Flight {
         this.aircraft = aircraft;
     }
 }
+

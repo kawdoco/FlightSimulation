@@ -1,7 +1,8 @@
+import { getAuthorization, expireSession } from './authSession';
+import { API_BASE_URL, WS_URL } from "./endpoints";
 import { Client } from "@stomp/stompjs";
 
-const WS_URL = "ws://localhost:8081/ws";
-const API_URL = "http://localhost:8081/api/telemetry";
+const API_URL = `${API_BASE_URL}/telemetry`;
 
 let stompClient = null;
 
@@ -15,6 +16,7 @@ export const connectTelemetryWebSocket = (
 
   const client = new Client({
     brokerURL: WS_URL,
+    beforeConnect: () => { client.connectHeaders = { Authorization: getAuthorization() }; },
     reconnectDelay: 5000,
     heartbeatIncoming: 4000,
     heartbeatOutgoing: 4000,
@@ -67,14 +69,17 @@ export const connectTelemetryWebSocket = (
 // Use the backend's existing REST endpoint.
 // The backend saves the telemetry and broadcasts it over STOMP.
 export const sendTelemetry = async (flightId, telemetry) => {
+  const sentAuthorization = getAuthorization();
   const response = await fetch(`${API_URL}/${flightId}`, {
     method: "POST",
+    signal: AbortSignal.timeout(30000),
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json", Authorization: sentAuthorization,
     },
     body: JSON.stringify(telemetry),
   });
 
+  if (response.status === 401) expireSession(sentAuthorization);
   if (!response.ok) {
     throw new Error(
       `Failed to save telemetry: HTTP ${response.status}`
@@ -96,3 +101,5 @@ export const disconnectTelemetryWebSocket = async () => {
 export const isTelemetryConnected = () => {
   return Boolean(stompClient?.connected);
 };
+
+

@@ -10,6 +10,14 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final WebSocketSessions sessions;
+    public WebSocketConfig(WebSocketSessions sessions){this.sessions=sessions;}
+    @Override public void configureWebSocketTransport(org.springframework.web.socket.config.annotation.WebSocketTransportRegistration registration){
+        registration.addDecoratorFactory(sessions::decorate);
+    }
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
+    private String frontendUrl;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
 
@@ -23,6 +31,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
         registry
                 .addEndpoint("/ws")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOrigins(frontendUrl);
     }
 }

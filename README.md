@@ -1,3 +1,4 @@
+> Release status: implementation and local checks are progressing; this repository is not yet certified production-ready. See [Release acceptance](docs/RELEASE_ACCEPTANCE.md) for verified results, external blockers and deployment instructions. Earlier feature lists describe project scope and should not be treated as acceptance evidence.
 # ✈️ FlightSimulation
 
 **FlightSimulation** is a full-stack **Enterprise Application Development (EAD)** project that combines an interactive web-based aircraft flight simulation, real-time telemetry monitoring, enterprise management features, and IoT-based physical flight controls.
@@ -382,3 +383,4 @@ main
       ├── feature/maintenance-alerts
       └── feature/iot-integration
 ```
+

@@ -9,11 +9,12 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "telemetry")
+@Table(name = "telemetry", indexes = @Index(name = "idx_telemetry_flight_recorded", columnList = "flight_id,recorded_at"))
 public class Telemetry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private Long id;
 
     @NotNull(message = "Altitude is required")
@@ -46,6 +47,7 @@ public class Telemetry {
     private Double fuel;
 
     @Column(name = "recorded_at")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private LocalDateTime recordedAt;
 
     @ManyToOne
@@ -142,3 +144,4 @@ public class Telemetry {
         this.flight = flight;
     }
 }
+

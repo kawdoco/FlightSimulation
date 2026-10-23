@@ -1,10 +1,11 @@
+import { API_BASE_URL } from "./endpoints";
 import axios from "axios";
 
-const API_URL = "http://localhost:8081/api/telemetry";
+const API_URL = `${API_BASE_URL}/telemetry`;
 
-export const getTelemetryReport = async (flightId) => {
+export const getTelemetryReport = async (flightId, page = 0) => {
   const response = await axios.get(
-    `${API_URL}/${flightId}`
+    `${API_URL}/${flightId}/history`, { params: { page, size: 100 } }
   );
 
   return response.data;
@@ -23,6 +24,7 @@ export const downloadTelemetryCsv = async (flightId) => {
     `${API_URL}/${flightId}/export`,
     {
       responseType: "blob",
+      timeout: 300000,
     }
   );
 
@@ -48,3 +50,4 @@ export const downloadTelemetryCsv = async (flightId) => {
 
   window.URL.revokeObjectURL(url);
 };
+

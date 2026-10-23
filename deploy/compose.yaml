@@ -1,0 +1,32 @@
+services:
+  database:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: flightsimulation
+      POSTGRES_USER: flightsimulation
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - flight_database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U flightsimulation']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      APP_PROFILE: prod
+      DB_URL: jdbc:postgresql://database:5432/flightsimulation
+      DB_USERNAME: flightsimulation
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set initial admin password}
+      FRONTEND_URL: ${FRONTEND_URL:?Set HTTPS frontend origin}
+    ports:
+      - '127.0.0.1:8081:8081'
+    depends_on:
+      database:
+        condition: service_healthy
+volumes:
+  flight_database:

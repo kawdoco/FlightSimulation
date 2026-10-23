@@ -1,6 +1,7 @@
+import TelemetryStatus from '../components/TelemetryStatus';
 import MetricCard from '../components/MetricCard';
 
-export default function TelemetryPage({ telemetry, hasReceivedTelemetry }) {
+export default function TelemetryPage({ telemetry, hasReceivedTelemetry, lastReceivedAt }) {
   const format = (value, decimals = 0) => (Number(value) || 0).toFixed(decimals);
   const items = [
     ['Altitude', `${format(telemetry.altitude)} ft`, 'altitude'],
@@ -13,7 +14,8 @@ export default function TelemetryPage({ telemetry, hasReceivedTelemetry }) {
     ['Flight', telemetry.flight?.flightNumber ?? '—', 'aircraft'],
   ];
   return <div className="telemetry-page">
-    <div className="page-header"><div><h1>Live Telemetry Monitoring</h1><p>Real-time flight data from your connected telemetry source.</p></div><div role="status" className={`connection-status${hasReceivedTelemetry ? ' connected' : ''}`}><span aria-hidden="true">●</span>{hasReceivedTelemetry ? 'Data received' : 'Waiting for telemetry'}</div></div>
+    <div className="page-header"><div><h1>Live Telemetry Monitoring</h1><p>Real-time flight data from your connected telemetry source.</p></div><TelemetryStatus lastReceivedAt={lastReceivedAt} /></div>
     <div className="telemetry-grid">{items.map(([title, value, icon]) => <MetricCard key={title} title={title} value={value} icon={icon} />)}</div>
   </div>;
 }
+

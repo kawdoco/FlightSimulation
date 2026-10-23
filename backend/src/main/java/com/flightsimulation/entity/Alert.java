@@ -10,8 +10,12 @@ import java.time.LocalDateTime;
 @Table(name = "alerts")
 public class Alert {
 
+    @Version
+    private Long version;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private Long id;
 
     @NotNull(message = "Aircraft ID is required")
@@ -129,3 +133,4 @@ public class Alert {
         this.resolvedAt = resolvedAt;
     }
 }
+

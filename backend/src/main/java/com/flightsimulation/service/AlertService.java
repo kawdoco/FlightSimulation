@@ -13,6 +13,7 @@ import java.util.Set;
 @Service
 public class AlertService {
 
+    private final com.flightsimulation.repository.FlightRepository flights;
     private final AlertRepository alertRepository;
     private final AircraftRepository aircraftRepository;
 
@@ -24,8 +25,9 @@ public class AlertService {
 
     public AlertService(
             AlertRepository alertRepository,
-            AircraftRepository aircraftRepository
+            AircraftRepository aircraftRepository, com.flightsimulation.repository.FlightRepository flights
     ) {
+        this.flights = flights;
         this.alertRepository = alertRepository;
         this.aircraftRepository = aircraftRepository;
     }
@@ -127,6 +129,11 @@ public class AlertService {
             );
         }
 
+        if (alert.getFlightId() != null) {
+            var flight = flights.findById(alert.getFlightId()).orElseThrow(() -> new ResourceNotFoundException("Flight not found"));
+            if (!java.util.Objects.equals(flight.getAircraft().getId(), alert.getAircraftId()))
+                throw new IllegalArgumentException("Flight does not belong to the selected aircraft");
+        }
         if (!VALID_SEVERITIES.contains(alert.getSeverity())) {
             throw new IllegalArgumentException(
                     "Invalid severity. Allowed values: " +

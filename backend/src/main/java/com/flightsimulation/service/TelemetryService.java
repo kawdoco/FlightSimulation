@@ -44,22 +44,21 @@ public class TelemetryService {
         return telemetryRepository.save(telemetry);
     }
 
+    public record HistoryPage(List<Telemetry> content, int page, int size, boolean hasNext) {}
+    public HistoryPage getHistory(Long flightId, int page, int size) {
+        if(page < 0 || size < 1 || size > 200) throw new IllegalArgumentException("Page must be nonnegative and size must be between 1 and 200");
+        if(!flightRepository.existsById(flightId)) throw new ResourceNotFoundException("Flight not found with id: " + flightId);
+        var records = telemetryRepository.findByFlightId(flightId,
+            org.springframework.data.domain.PageRequest.of(page,size,
+                org.springframework.data.domain.Sort.by("recordedAt").descending().and(org.springframework.data.domain.Sort.by("id").descending())));
+        return new HistoryPage(records.getContent(),page,size,records.hasNext());
+    }
     public List<Telemetry> getTelemetryByFlight(
             Long flightId
     ) {
 
-        if (!flightRepository.existsById(flightId)) {
-            throw new RuntimeException(
-                    "Flight not found with id: " + flightId
-            );
-        }
-
-        return telemetryRepository
-                .findByFlightIdOrderByRecordedAtDesc(
-                        flightId
-                );
+        return getHistory(flightId,0,200).content();
     }
-
     // ==========================================
     // Sprint 2 - Telemetry Summary Report
     // ==========================================
@@ -71,197 +70,62 @@ public class TelemetryService {
         Flight flight = flightRepository
                 .findById(flightId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Flight not found with id: " + flightId
                         )
                 );
 
-        List<Telemetry> telemetryList =
-                telemetryRepository
-                        .findByFlightIdOrderByRecordedAtDesc(
-                                flightId
-                        );
-
-        Map<String, Object> summary =
-                new LinkedHashMap<>();
-
+        var aggregate = telemetryRepository.summarize(flightId);
+        Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("flightId", flight.getId());
         summary.put("flightNumber", flight.getFlightNumber());
         summary.put("status", flight.getStatus());
-        summary.put("recordCount", telemetryList.size());
-
-        if (telemetryList.isEmpty()) {
-
-            summary.put("averageAltitude", 0.0);
-            summary.put("maxAltitude", 0.0);
-
-            summary.put("averageSpeed", 0.0);
-            summary.put("maxSpeed", 0.0);
-
-            summary.put("minimumFuel", 0.0);
-
-            return summary;
-        }
-
-        double averageAltitude =
-                telemetryList.stream()
-                        .mapToDouble(Telemetry::getAltitude)
-                        .average()
-                        .orElse(0.0);
-
-        double maxAltitude =
-                telemetryList.stream()
-                        .mapToDouble(Telemetry::getAltitude)
-                        .max()
-                        .orElse(0.0);
-
-        double averageSpeed =
-                telemetryList.stream()
-                        .mapToDouble(Telemetry::getSpeed)
-                        .average()
-                        .orElse(0.0);
-
-        double maxSpeed =
-                telemetryList.stream()
-                        .mapToDouble(Telemetry::getSpeed)
-                        .max()
-                        .orElse(0.0);
-
-        double minimumFuel =
-                telemetryList.stream()
-                        .mapToDouble(Telemetry::getFuel)
-                        .min()
-                        .orElse(0.0);
-
-        summary.put(
-                "averageAltitude",
-                averageAltitude
-        );
-
-        summary.put(
-                "maxAltitude",
-                maxAltitude
-        );
-
-        summary.put(
-                "averageSpeed",
-                averageSpeed
-        );
-
-        summary.put(
-                "maxSpeed",
-                maxSpeed
-        );
-
-        summary.put(
-                "minimumFuel",
-                minimumFuel
-        );
-
+        summary.put("recordCount", aggregate.getRecordCount());
+        summary.put("averageAltitude", aggregate.getAverageAltitude());
+        summary.put("maxAltitude", aggregate.getMaxAltitude());
+        summary.put("averageSpeed", aggregate.getAverageSpeed());
+        summary.put("maxSpeed", aggregate.getMaxSpeed());
+        summary.put("minimumFuel", aggregate.getMinimumFuel());
         return summary;
     }
-
     // ==========================================
     // Sprint 2 - CSV Export
     // ==========================================
 
-    public String exportTelemetryToCsv(
-            Long flightId
-    ) {
-
-        Flight flight = flightRepository
-                .findById(flightId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Flight not found with id: " + flightId
-                        )
-                );
-
-        List<Telemetry> telemetryList =
-                telemetryRepository
-                        .findByFlightIdOrderByRecordedAtDesc(
-                                flightId
-                        );
-
-        StringBuilder csv =
-                new StringBuilder();
-
-        csv.append("Flight ID,");
-        csv.append(flight.getId());
-        csv.append("\n");
-
-        csv.append("Flight Number,");
-        csv.append(flight.getFlightNumber());
-        csv.append("\n");
-
-        csv.append("Status,");
-        csv.append(flight.getStatus());
-        csv.append("\n\n");
-
-        csv.append(
-                "recordedAt,altitude,speed,pitch,roll,heading,throttle,fuel\n"
-        );
-
-        for (Telemetry telemetry : telemetryList) {
-
-            csv.append(
-                    telemetry.getRecordedAt() != null
-                            ? telemetry.getRecordedAt()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getAltitude() != null
-                            ? telemetry.getAltitude()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getSpeed() != null
-                            ? telemetry.getSpeed()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getPitch() != null
-                            ? telemetry.getPitch()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getRoll() != null
-                            ? telemetry.getRoll()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getHeading() != null
-                            ? telemetry.getHeading()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getThrottle() != null
-                            ? telemetry.getThrottle()
-                            : ""
-            );
-            csv.append(",");
-
-            csv.append(
-                    telemetry.getFuel() != null
-                            ? telemetry.getFuel()
-                            : ""
-            );
-
-            csv.append("\n");
-        }
-
-        return csv.toString();
+    public org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody exportTelemetryToCsv(Long flightId) {
+        Flight flight = flightRepository.findById(flightId)
+            .orElseThrow(() -> new ResourceNotFoundException("Flight not found with id: " + flightId));
+        String flightNumber = flight.getFlightNumber();
+        String status = flight.getStatus();
+        long upperId = telemetryRepository.exportUpperId(flightId);
+        return output -> {
+            var writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(output, java.nio.charset.StandardCharsets.UTF_8));
+            writer.write("Flight ID," + flightId + "\r\nFlight Number," + csvText(flightNumber)
+                + "\r\nStatus," + csvText(status) + "\r\n\r\n");
+            writer.write("recordedAt,altitude,speed,pitch,roll,heading,throttle,fuel\r\n");
+            long cursor = upperId;
+            while(cursor > 0) {
+                var batch = telemetryRepository.findByFlightIdAndIdLessThanEqualOrderByIdDesc(
+                    flightId,cursor,org.springframework.data.domain.PageRequest.of(0,500));
+                if(batch.isEmpty()) break;
+                for(var t : batch) {
+                    writer.write(value(t.getRecordedAt()) + "," + value(t.getAltitude()) + "," + value(t.getSpeed())
+                        + "," + value(t.getPitch()) + "," + value(t.getRoll()) + "," + value(t.getHeading())
+                        + "," + value(t.getThrottle()) + "," + value(t.getFuel()) + "\r\n");
+                }
+                cursor = batch.getLast().getId() - 1;
+                writer.flush();
+            }
+            writer.flush();
+        };
+    }
+    private static String value(Object value) { return value == null ? "" : value.toString(); }
+    static String csvText(String text) {
+        if(text == null) return "\"\"";
+        String stripped = text.stripLeading();
+        if(!stripped.isEmpty() && "=+-@".indexOf(stripped.charAt(0)) >= 0
+            || text.startsWith("\t") || text.startsWith("\r") || text.startsWith("\n")) text = "'" + text;
+        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 }
+

@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/iot-devices")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${app.frontend.url}", exposedHeaders = "X-Request-ID")
 public class IoTDeviceController {
 
     private final IoTDeviceService service;
@@ -33,11 +33,11 @@ public class IoTDeviceController {
     @PostMapping("/register")
     public ResponseEntity<IoTDevice>
     registerDevice(
-            @RequestBody IoTDevice device
+            @jakarta.validation.Valid @RequestBody com.flightsimulation.dto.DeviceRegistrationRequest device
     ) {
 
         return ResponseEntity.ok(
-                service.registerOrUpdate(device)
+                service.registerOrUpdate(device.toEntity())
         );
     }
 }

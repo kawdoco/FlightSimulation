@@ -10,12 +10,6 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-where mvn >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Maven is required. Install Maven and add it to PATH.
-    pause
-    exit /b 1
-)
 where npm >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Node.js and npm are required. Install Node.js and reopen this file.
@@ -23,12 +17,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "SERIAL_ENABLED=true"
+if not defined SERIAL_ENABLED set "SERIAL_ENABLED=false"
 if not defined FLIGHTSIMULATION_SERIAL_PORT set "FLIGHTSIMULATION_SERIAL_PORT=COM3"
 if not "%~1"=="" set "FLIGHTSIMULATION_SERIAL_PORT=%~1"
 
 echo Close Arduino Serial Monitor and Serial Plotter before starting.
-echo Starting ESP32 telemetry on %FLIGHTSIMULATION_SERIAL_PORT%.
+echo Serial enabled: %SERIAL_ENABLED% on %FLIGHTSIMULATION_SERIAL_PORT%.
 echo Frontend: http://localhost:5173
 echo Backend:  http://localhost:8081
 echo Stop each server with Ctrl+C in its own window.
@@ -39,14 +33,14 @@ exit /b 0
 
 :backend
 cd /d "%~dp0backend"
-call mvn spring-boot:run
+call mvnw.cmd spring-boot:run
 if errorlevel 1 echo Backend failed. Check the error above and whether the serial port is in use.
 exit /b
 
 :frontend
 cd /d "%~dp0frontend"
 if not exist "node_modules\vite\bin\vite.js" (
-    call npm install
+    call npm ci
     if errorlevel 1 (
         echo Frontend dependency installation failed. Check the error above.
         exit /b 1
@@ -54,3 +48,4 @@ if not exist "node_modules\vite\bin\vite.js" (
 )
 call npm run dev -- --port 5173 --strictPort
 exit /b
+

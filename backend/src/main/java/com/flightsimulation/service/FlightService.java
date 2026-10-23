@@ -16,13 +16,15 @@ import java.util.List;
 @Service
 public class FlightService {
 
+    private final AuditService audit;
     private final FlightRepository flightRepository;
     private final AircraftRepository aircraftRepository;
 
     public FlightService(
             FlightRepository flightRepository,
-            AircraftRepository aircraftRepository
+            AircraftRepository aircraftRepository, AuditService audit
     ) {
+        this.audit = audit;
         this.flightRepository = flightRepository;
         this.aircraftRepository = aircraftRepository;
     }
@@ -79,7 +81,9 @@ public class FlightService {
         flight.setAircraft(aircraft);
         flight.setStatus("SCHEDULED");
 
-        return flightRepository.save(flight);
+        var saved = flightRepository.save(flight);
+        audit.record(new AuditService.AccountAudit("FLIGHT_CREATED", "flight:" + saved.getId()));
+        return saved;
     }
 
     @Transactional
@@ -116,7 +120,9 @@ public class FlightService {
         existing.setScheduledTime(updatedFlight.getScheduledTime());
         existing.setAircraft(aircraft);
 
-        return flightRepository.save(existing);
+        var saved = flightRepository.save(existing);
+        audit.record(new AuditService.AccountAudit("FLIGHT_UPDATED", "flight:" + saved.getId()));
+        return saved;
     }
 
     @Transactional
@@ -138,7 +144,9 @@ public class FlightService {
         flight.setStatus("IN_PROGRESS");
         flight.setStartTime(LocalDateTime.now());
 
-        return flightRepository.save(flight);
+        var saved = flightRepository.save(flight);
+        audit.record(new AuditService.AccountAudit("FLIGHT_STARTED", "flight:" + saved.getId()));
+        return saved;
     }
 
     @Transactional
@@ -163,7 +171,9 @@ public class FlightService {
         flight.setStatus("COMPLETED");
         flight.setEndTime(LocalDateTime.now());
 
-        return flightRepository.save(flight);
+        var saved = flightRepository.save(flight);
+        audit.record(new AuditService.AccountAudit("FLIGHT_COMPLETED", "flight:" + saved.getId()));
+        return saved;
     }
 
     @Transactional
@@ -178,7 +188,9 @@ public class FlightService {
 
         flight.setStatus("CANCELLED");
 
-        return flightRepository.save(flight);
+        var saved = flightRepository.save(flight);
+        audit.record(new AuditService.AccountAudit("FLIGHT_CANCELLED", "flight:" + saved.getId()));
+        return saved;
     }
 
     @Transactional
@@ -192,6 +204,7 @@ public class FlightService {
         }
 
         flightRepository.delete(flight);
+        audit.record(new AuditService.AccountAudit("FLIGHT_DELETED", "flight:" + id));
     }
 
     public List<Flight> getFlightHistory(

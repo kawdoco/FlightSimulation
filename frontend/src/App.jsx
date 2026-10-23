@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Sidebar from "./components/Sidebar.jsx";
-import FlightSimulator from "./simulator/FlightSimulator.jsx";
+const FlightSimulator = lazy(() => import("./simulator/FlightSimulator.jsx"));
 import AircraftPage from "./pages/AircraftPage.jsx";
 import FlightPage from "./pages/FlightPage.jsx";
 import TelemetryPage from "./pages/TelemetryPage.jsx";
@@ -57,12 +57,12 @@ function Dashboard({
         </div>
       </div>
 
-      <FlightSimulator
+      <Suspense fallback={<p role="status">Loading flight simulator…</p>}> <FlightSimulator
         telemetry={telemetry}
         setTelemetry={setTelemetry}
         controlMode={controlMode}
         setControlMode={setControlMode}
-      />
+      /></Suspense>
     </>
   );
 }
@@ -72,6 +72,7 @@ function App() {
     useState(initialTelemetry);
   const [liveTelemetry, setLiveTelemetry] =
     useState(initialTelemetry);
+  const [lastReceivedAt, setLastReceivedAt] = useState(null);
   const [hasReceivedTelemetry, setHasReceivedTelemetry] =
     useState(false);
   const [controlMode, setControlMode] = useState("iot");
@@ -98,6 +99,7 @@ function App() {
         ...incomingTelemetry,
       }));
       setHasReceivedTelemetry(true);
+      setLastReceivedAt(Date.now());
     }, telemetryFlightId);
 
     return () => {
@@ -149,7 +151,7 @@ function App() {
               element={
                 <TelemetryPage
                   telemetry={liveTelemetry}
-                  hasReceivedTelemetry={hasReceivedTelemetry}
+                  hasReceivedTelemetry={hasReceivedTelemetry} lastReceivedAt={lastReceivedAt}
                 />
               }
             />
@@ -173,7 +175,7 @@ function App() {
   element={
     <IoTDevicesPage
       telemetry={liveTelemetry}
-      hasReceivedTelemetry={hasReceivedTelemetry}
+      hasReceivedTelemetry={hasReceivedTelemetry} lastReceivedAt={lastReceivedAt}
     />
   }
 />
@@ -185,3 +187,5 @@ function App() {
 }
 
 export default App;
+
+

@@ -44,7 +44,7 @@ public class SerialTelemetryListener {
     private final long flightId;
 
     private volatile boolean running;
-    private SerialPort serialPort;
+    private volatile SerialPort serialPort;
     private Thread readerThread;
 
     public SerialTelemetryListener(
@@ -65,44 +65,44 @@ public class SerialTelemetryListener {
 
     @PostConstruct
     public void start() {
-        serialPort = SerialPort.getCommPort(portName);
-        serialPort.setBaudRate(baudRate);
-        serialPort.setNumDataBits(8);
-        serialPort.setNumStopBits(SerialPort.ONE_STOP_BIT);
-        serialPort.setParity(SerialPort.NO_PARITY);
-        // Wait for data without terminating the reader while the plane connects.
-        serialPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
-
-        if (!serialPort.openPort()) {
-            throw new IllegalStateException(
-                    "Could not open ESP32 serial port " + portName
-                            + ". Check the COM port and close any serial monitor using it."
-            );
-        }
-
         running = true;
-        readerThread = new Thread(this::readTelemetry, "esp32-serial-telemetry");
+        readerThread = new Thread(this::connectionLoop, "esp32-serial-telemetry");
         readerThread.setDaemon(true);
         readerThread.start();
-        logger.info("ESP32 serial telemetry enabled on {} at {} baud", portName, baudRate);
     }
 
+    private void connectionLoop() {
+        while(running && !Thread.currentThread().isInterrupted()) {
+            try {
+                serialPort = SerialPort.getCommPort(portName);
+                serialPort.setBaudRate(baudRate);
+                serialPort.setNumDataBits(8);
+                serialPort.setNumStopBits(SerialPort.ONE_STOP_BIT);
+                serialPort.setParity(SerialPort.NO_PARITY);
+                serialPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
+                if(!serialPort.openPort()) throw new IOException("Serial port unavailable");
+                if(!running) break;
+                logger.info("ESP32 connected on {} at {} baud",portName,baudRate);
+                readTelemetry();
+            } catch(IOException | RuntimeException ex) {
+                if(running) logger.warn("ESP32 connection unavailable on {}; retrying in 3 seconds",portName);
+            } finally {
+                if(serialPort!=null && serialPort.isOpen()) serialPort.closePort();
+            }
+            if(running) try { Thread.sleep(3000); }
+            catch(InterruptedException ex){Thread.currentThread().interrupt();break;}
+        }
+    }
     private void readTelemetry() {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(serialPort.getInputStream(), StandardCharsets.UTF_8)
         )) {
+            SerialLineReader frames = new SerialLineReader(reader, 4096);
             while (running) {
-                String line = reader.readLine();
-                if (line == null) {
-                    try {
-                        Thread.sleep(25);
-                    } catch (InterruptedException exception) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                    continue;
-                }
-                if (line.isBlank()) {
+                String line;
+                try { line = frames.readLine(); }
+                catch(SerialLineReader.FrameTooLongException ex){logger.warn("Discarded oversized ESP32 serial frame");continue;}
+                if(line == null) throw new IOException("Serial connection ended");                if (line.isBlank()) {
                     continue;
                 }
                 if (!line.stripLeading().startsWith("{")) {
@@ -159,3 +159,5 @@ public class SerialTelemetryListener {
         }
     }
 }
+
+

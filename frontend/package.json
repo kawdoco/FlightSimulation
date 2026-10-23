@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test:e2e": "playwright test",
+    "test": "node --test tests/*.test.js",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -19,7 +21,9 @@
     "three": "^0.180.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@vitejs/plugin-react": "^5.0.4",
     "vite": "^7.1.7"
   }
 }
+

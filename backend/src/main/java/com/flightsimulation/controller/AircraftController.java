@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/aircraft")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${app.frontend.url}", exposedHeaders = "X-Request-ID")
 public class AircraftController {
 
     private final AircraftService aircraftService;
@@ -36,10 +36,10 @@ public class AircraftController {
 
     @PostMapping
     public ResponseEntity<Aircraft> createAircraft(
-            @Valid @RequestBody Aircraft aircraft) {
+            @Valid @RequestBody com.flightsimulation.dto.AircraftRequest aircraft) {
 
         Aircraft savedAircraft =
-                aircraftService.createAircraft(aircraft);
+                aircraftService.createAircraft(aircraft.toEntity());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -49,10 +49,10 @@ public class AircraftController {
     @PutMapping("/{id}")
     public ResponseEntity<Aircraft> updateAircraft(
             @PathVariable Long id,
-            @Valid @RequestBody Aircraft aircraft) {
+            @Valid @RequestBody com.flightsimulation.dto.AircraftRequest aircraft) {
 
         return ResponseEntity.ok(
-                aircraftService.updateAircraft(id, aircraft));
+                aircraftService.updateAircraft(id, aircraft.toEntity()));
     }
 
     @DeleteMapping("/{id}")
@@ -64,3 +64,4 @@ public class AircraftController {
         return ResponseEntity.noContent().build();
     }
 }
+

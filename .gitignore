@@ -11,3 +11,8 @@ backend/target/
 /backend/target/
 /frontend/node_modules/
 /frontend/dist/
+/backend/data/
+
+/frontend/test-results/
+/frontend/playwright-report/
+/backend/*.log

@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/alerts")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${app.frontend.url}", exposedHeaders = "X-Request-ID")
 public class AlertController {
 
     private final AlertService alertService;
@@ -32,11 +32,11 @@ public class AlertController {
 
     @PostMapping
     public ResponseEntity<Alert> createAlert(
-            @Valid @RequestBody Alert alert
+            @Valid @RequestBody com.flightsimulation.dto.AlertRequest alert
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(alertService.createAlert(alert));
+                .body(alertService.createAlert(alert.toEntity()));
     }
 
     @PutMapping("/{id}/acknowledge")
@@ -65,3 +65,4 @@ public class AlertController {
         return ResponseEntity.noContent().build();
     }
 }
+

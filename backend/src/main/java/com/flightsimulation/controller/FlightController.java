@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/flights")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "${app.frontend.url}", exposedHeaders = "X-Request-ID")
 public class FlightController {
 
     private final FlightService flightService;
@@ -72,12 +72,12 @@ public class FlightController {
     public ResponseEntity<Flight>
     createFlight(
             @RequestParam Long aircraftId,
-            @Valid @RequestBody Flight flight
+            @Valid @RequestBody com.flightsimulation.dto.FlightRequest flight
     ) {
 
         Flight saved =
                 flightService.createFlight(
-                        flight,
+                        flight.toEntity(),
                         aircraftId
                 );
 
@@ -91,13 +91,13 @@ public class FlightController {
     updateFlight(
             @PathVariable Long id,
             @RequestParam Long aircraftId,
-            @Valid @RequestBody Flight flight
+            @Valid @RequestBody com.flightsimulation.dto.FlightRequest flight
     ) {
 
         return ResponseEntity.ok(
                 flightService.updateFlight(
                         id,
-                        flight,
+                        flight.toEntity(),
                         aircraftId
                 )
         );
@@ -149,3 +149,4 @@ public class FlightController {
                 .build();
     }
 }
+
