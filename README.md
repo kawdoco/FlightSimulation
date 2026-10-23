@@ -2,7 +2,7 @@
 
 **FlightSimulation** is a full-stack **Enterprise Application Development (EAD)** project that combines an interactive web-based aircraft flight simulation, real-time telemetry monitoring, enterprise management features, and IoT-based physical flight controls.
 
-The system uses **React** and **Three.js** for the interactive 3D flight environment, **Java Spring Boot** for the enterprise backend, **MySQL** for persistent data management, and an **ESP32-based IoT controller** for real-time aircraft control and sensor integration.
+The system uses **React** and **Three.js** for the interactive 3D flight environment, **Java Spring Boot** for the enterprise backend, **Superbase** for persistent data management, and an **ESP32-based IoT controller** for real-time aircraft control and sensor integration.
 
 ---
 
@@ -202,7 +202,7 @@ Physical Controls / Sensors
 
 ### Database
 
-* MySQL
+* Superbase
 
 ### IoT
 
@@ -275,7 +275,7 @@ Physical Controls / Sensors
 └───────────────────────────┘
               │
               ▼
-        MySQL Database
+        Superbase
 ```
 
 ---
