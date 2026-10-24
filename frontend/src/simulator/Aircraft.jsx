@@ -7,7 +7,7 @@ import {
   useRef,
 } from "react";
 import * as THREE from "three";
-import { FEET_PER_WORLD_UNIT } from "./speedDynamics";
+import { FEET_PER_WORLD_UNIT, forwardDistance } from "./speedDynamics";
 
 const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
   const aircraftRef = useRef();
@@ -110,7 +110,7 @@ const Aircraft = forwardRef(({ telemetry = {} }, ref) => {
     aircraft.rotation.y += headingDifference * smoothing;
 
     // Forward movement follows speed and heading.
-    const distance = (speed / 25) * frameDelta;
+    const distance = forwardDistance(speed, frameDelta);
 
     aircraft.position.x -=
       Math.sin(aircraft.rotation.y) * distance;

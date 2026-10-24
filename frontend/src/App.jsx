@@ -1,3 +1,4 @@
+import { advanceBankHeading } from './simulator/bankDynamics';
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -57,7 +58,7 @@ function Dashboard({
         </div>
       </div>
 
-      <Suspense fallback={<p role="status">Loading flight simulator…</p>}> <FlightSimulator
+      <Suspense fallback={<p role="status">Loading flight simulatorï¿½</p>}> <FlightSimulator
         telemetry={telemetry}
         setTelemetry={setTelemetry}
         controlMode={controlMode}
@@ -77,7 +78,9 @@ function App() {
     useState(false);
   const [controlMode, setControlMode] = useState("iot");
 
-  const initialHeading = useRef(null);
+  const lastHeadingTime = useRef(null);
+  const headingState = useRef(0);
+  const [simulatorHeading, setSimulatorHeading] = useState(0);
 
   useEffect(() => {
     let disposed = false;
@@ -85,15 +88,12 @@ function App() {
     connectTelemetryWebSocket((incomingTelemetry) => {
       if (disposed) return;
 
-      const heading = Number(incomingTelemetry.heading);
-
-      if (
-        initialHeading.current === null &&
-        Number.isFinite(heading)
-      ) {
-        initialHeading.current = heading;
-      }
-
+      const headingTime = performance.now();
+      const headingDelta = lastHeadingTime.current === null ? 0.1 : (headingTime - lastHeadingTime.current) / 1000;
+      lastHeadingTime.current = headingTime;
+      headingState.current = advanceBankHeading(headingState.current,
+        Number(incomingTelemetry.speed), Number(incomingTelemetry.roll), headingDelta);
+      setSimulatorHeading(headingState.current);
       setLiveTelemetry((current) => ({
         ...current,
         ...incomingTelemetry,
@@ -108,17 +108,9 @@ function App() {
     };
   }, []);
 
-  const incomingHeading = Number(liveTelemetry.heading);
-  const relativeHeading = Number.isFinite(incomingHeading)
-    ? (
-        (incomingHeading - (initialHeading.current ?? 0)) % 360 +
-        360
-      ) % 360
-    : 0;
-
   const simulatorTelemetry =
     controlMode === "iot"
-      ? { ...liveTelemetry, heading: relativeHeading }
+      ? { ...liveTelemetry, heading: simulatorHeading }
       : keyboardTelemetry;
 
   return (
@@ -187,5 +179,3 @@ function App() {
 }
 
 export default App;
-
-

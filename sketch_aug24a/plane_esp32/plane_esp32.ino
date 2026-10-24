@@ -186,7 +186,7 @@ void receiveControllerCommands() {
               &throttle,
               &resetHeading
           ) == 5
-          && type == 'C') {
+          && type == 'C' && isfinite(stickX) && isfinite(stickY)) {
         controlPacketsReceived++;
         controllerAddress = udp.remoteIP();
         controllerDiscovered = true;
@@ -232,9 +232,11 @@ void updateSensors(uint32_t now) {
   if (fabs(filteredPitch) < 0.5f) filteredPitch = 0.0f;
   if (fabs(filteredRoll) < 0.5f) filteredRoll = 0.0f;
 
-  const float elapsedSeconds = (now - lastSensorReadAt) / 1000.0f;
+  const float elapsedSeconds = min(0.25f, (now - lastSensorReadAt) / 1000.0f);
+  float yawRate = (gyroZ - gyroZOffset) * 180.0f / PI;
+  if (!isfinite(yawRate) || fabs(yawRate) < 1.5f) yawRate = 0.0f;
   headingDegrees = wrapHeading(
-      headingDegrees + (gyroZ - gyroZOffset) * 180.0f / PI * elapsedSeconds
+      headingDegrees + yawRate * elapsedSeconds
   );
   lastSensorReadAt = now;
   distanceCm = readDistanceCm();
@@ -269,7 +271,11 @@ void sendTelemetry() {
   }
 
   const float speed = throttlePercent * 3.0f;
-  // Swap sensor axes and invert pitch so physical nose-down is simulator nose-down.
+  // Combine physical aircraft tilt with joystick attitude commands.
+  // Sensor axes follow the mounted orientation: nose pitch uses -filteredRoll.
+  // Bank direction follows the updated physical left/right mounting.
+  const float simulatorPitch = constrain(-filteredRoll + controlPitch * 25.0f, -45.0f, 45.0f);
+  const float simulatorRoll = constrain(filteredPitch + controlRoll * 40.0f, -45.0f, 45.0f);
   char packet[128];
   snprintf(
       packet,
@@ -277,8 +283,8 @@ void sendTelemetry() {
       "T,%.2f,%.2f,%.2f,%.2f,%.2f,%d,100",
       altitudeCm,
       speed,
-      -filteredRoll,
-      filteredPitch,
+      simulatorPitch,
+      simulatorRoll,
       headingDegrees,
       throttlePercent
   );
@@ -359,6 +365,13 @@ void loop() {
         controllerDiscovered ? controllerAddress.toString().c_str() : "not discovered",
         static_cast<unsigned long>(controlPacketsReceived),
         static_cast<unsigned long>(telemetryPacketsSent)
+    );
+    Serial.printf(
+        "Servo controls: roll=%.3f pitch=%.3f | target roll=%d pitch=%d | command age=%lu ms\n",
+        controlRoll, controlPitch,
+        constrain(SERVO_CENTER + static_cast<int>(controlRoll * SERVO_TRAVEL_DEGREES), 45, 135),
+        constrain(SERVO_CENTER + static_cast<int>(controlPitch * SERVO_TRAVEL_DEGREES), 45, 135),
+        static_cast<unsigned long>(millis() - lastCommandAt)
     );
     lastNetworkStatusAt = now;
   }

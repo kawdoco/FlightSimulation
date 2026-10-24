@@ -1,4 +1,4 @@
-﻿# FlightSimulation
+# FlightSimulation
 
 AeroSim is an EAD project combining aircraft and flight management, a React/Three.js simulator, real-time telemetry and ESP32 controls.
 
@@ -31,6 +31,7 @@ These features do not establish production readiness. See the release acceptance
 | --- | --- |
 | [Architecture](docs/ARCHITECTURE.md) | MVC layers, data flow, security and API contracts |
 | [Operations](docs/OPERATIONS.md) | Setup, verification, deployment, backup and troubleshooting |
+| [Demo walkthrough](docs/DEMO_GUIDE.md) | Presentation sequence, preflight checks and fallback |
 | [Release acceptance](docs/RELEASE_ACCEPTANCE.md) | Verified evidence and outstanding release gates |
 | [Requirements](docs/requirements/README.md) | Feature requirements and hardware integration plan |
 | [Historical notes](docs/archive/README.md) | Earlier reviews and incremental implementation history |

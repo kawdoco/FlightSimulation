@@ -1,4 +1,4 @@
-﻿# Operations
+# Operations
 
 ## Local setup
 
@@ -41,7 +41,7 @@ GitHub Actions defines backend, frontend and PostgreSQL jobs. Require the approp
 ## API contracts
 
 - Telemetry GET /api/telemetry/{flightId}: latest 200 samples; X-Result-Limit and Link advertise the cap/alternate history route.
-- /api/telemetry/{flightId}/history: zero-based page, size 1–200 (default 100); content/page/size/hasNext. Concurrent inserts can shift offset pages.
+- /api/telemetry/{flightId}/history: zero-based page, size 1�200 (default 100); content/page/size/hasNext. Concurrent inserts can shift offset pages.
 - /summary: full-flight database aggregates. /export: UTF-8 CSV, 500-row descending-ID batches, escaped metadata and formula protection. Initial maximum ID excludes later inserts; concurrent updates/deletes are not snapshot-isolated. The browser still buffers a Blob.
 - User, maintenance and audit lists: content/page/size/totalElements/totalPages/first/last, 50 records per page.
 - Validation errors return 400; missing resources 404; state/concurrency/integrity conflicts 409. Authentication/permission failures return safe JSON 401/403 without browser Basic challenge dialogs.
@@ -87,3 +87,20 @@ Use deploy/backup.ps1 with a new destination filename. Use deploy/restore-drill.
 scripts/load-smoke.mjs runs 50 read-only readiness requests at concurrency five. Supply LOAD_TEST_BASE_URL, LOAD_TEST_USERNAME and LOAD_TEST_PASSWORD via environment variables. It rejects plaintext remote targets and reports failure count/p50/p95. This is not a representative telemetry/load benchmark.
 
 Completed and pending verification belongs in [Release acceptance](RELEASE_ACCEPTANCE.md).
+
+## Joystick simulator climb mode
+
+Plane firmware combines mounted MPU6050 attitude with joystick commands for simulator pitch/roll. Pitch uses -filteredRoll plus joystick pitch; bank uses filteredPitch plus joystick roll to correct left/right direction. Both outputs are clamped to +/-45 degrees. Combined telemetry is simulator attitude, not a pure sensor measurement. Re-upload plane_esp32.ino to activate this behavior; controller firmware is unchanged.
+
+In IoT mode, the simulator integrates virtual altitude from speed and commanded pitch. Build speed above 120 km/h (throttle above 40 percent), then command nose-up to take off. Centering maintains altitude and nose-down descends to a ground floor. The simulator HUD/panel show virtual altitude; raw telemetry/history retain ultrasonic altitude. This is demo flight dynamics, not a physical aircraft model. Integration pauses after ten seconds without updated inputs. Virtual altitude is local to the simulator view and resets when it remounts or re-enters IoT mode. Frontend tests/build pass; firmware upload and physical joystick direction/climb verification remain pending.
+
+For an explicit hardware backend launch from the repository root, stop any existing backend then run .\scripts\start-hardware.ps1 -Port COM3 -FlightId 1. This supplies serial settings as command-line properties so an unset SERIAL_ENABLED variable cannot silently disable ingestion. It starts only the backend; keep the frontend running. Do not open the controller serial monitor at the same time.
+
+
+## Integrated simulator control corrections
+
+Forward travel now converts km/h to meters/second consistently with the scene scale. Virtual climb uses speed times sin(pitch), converts meters to feet and prevents ground penetration; takeoff still requires more than 120 km/h. This remains simplified demo dynamics (no aerodynamic stall/drag model). Zero speed cannot create vertical climb from pitch alone. Missing telemetry pauses virtual integration and forward motion after ten seconds. Restart aircraft resets position, virtual altitude and heading reference without signing out; live hardware controls are not physically reset.
+
+Simulator heading holds while parked and ignores rates at/below two degrees/second when moving; large changes are capped and reconnect gaps rebase. Plane firmware additionally applies a 1.5-degree/second gyro deadband and caps integration time. Slow intentional yaw may also be suppressed. Plane pitch/roll combines mounted MPU6050 axes and joystick commands, including corrected simulator bank direction. Flash the updated plane firmware to the plane board only; controller firmware is unchanged. Compilation/tests are not a substitute for checking actual sensor orientation and servo power/wiring. No plane-board upload is claimed in this correction pass.
+
+Heading control update: the simulator now uses coordinated bank turns above 120 km/h rather than integrating MPU6050 yaw into its flight direction. Level bank flies straight; small roll inputs under two degrees are ignored, turn rate is capped at 20 degrees/second, and parked/taxiing bank does not spin the aircraft. Raw gyro heading remains visible in telemetry. This supersedes the earlier simulator gyro-heading filter description. Throttle produces forward motion; pitch produces climb/descent, and roll produces turns at flying speed. This is simplified simulator control and requires checking physical axis directions after flashing the plane firmware.
