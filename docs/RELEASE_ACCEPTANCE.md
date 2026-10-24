@@ -6,7 +6,7 @@ Status reviewed: 2026-10-25. The application has substantial implementation and 
 
 | Check | Recorded result | Limit |
 | --- | --- | --- |
-| Local backend verify/package | 86 tests passed in this demo verification run | Re-run before release |
+| Local backend verify/package | 91 tests passed in the latest verification run | Re-run before release |
 | Local frontend unit tests/build | 21 tests/build passed | Large simulator chunk warning remains |
 | npm audit | Zero reported vulnerabilities after Vite update | Point-in-time result |
 | Flyway migration | H2 PostgreSQL-mode schema validation and repeat-run passed | Not PostgreSQL evidence by itself |
@@ -42,6 +42,12 @@ Status reviewed: 2026-10-25. The application has substantial implementation and 
 - Automated checks cover demo dynamics and bank turns, not a calibrated aerodynamic model. Raw telemetry/history retain sensor values; simulator altitude is local virtual state.
 
 Follow [Demo walkthrough](DEMO_GUIDE.md) for a repeatable presentation. Live full-stack browser acceptance, PostgreSQL staging evidence, restore/load checks and complete physical sensor acceptance remain pending.
+
+## Supabase cutover and live confirmation
+
+On 2026-10-25 the user supplied successful migration output from Supabase PostgreSQL 17.6: Flyway V1 applied in flightsimulation, and the data transaction committed after row-count verification. Aircraft=1, flights=1, telemetry=87559, application_users=1, audit_records=2; other application tables were empty. IDs and existing password hashes were preserved. The stopped H2 source received a hash-verified backup before import. Backups are excluded from Git.
+
+After live broadcasting was decoupled from cloud recording and simulator freshness used packet timestamps, the user reported all controls/telemetry/simulator behavior working. This is user-reported live acceptance, not an automated hardware certification. Cloud recording uses latest-sample backpressure and is not lossless. Ultrasonic echo, full reconnect/fault testing, independent cloud count inspection, restore drills and production acceptance remain outstanding.
 
 ## Release decision
 

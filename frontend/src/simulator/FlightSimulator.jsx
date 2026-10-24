@@ -1,3 +1,4 @@
+import TelemetryStatus from '../components/TelemetryStatus';
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 
@@ -73,6 +74,7 @@ const FlightSimulator = ({
   setTelemetry,
   controlMode,
   setControlMode,
+  lastReceivedAt,
 }) => {
   const [iotStale, setIotStale] = useState(false);
   const [headingOrigin, setHeadingOrigin] = useState(0);
@@ -86,10 +88,10 @@ const FlightSimulator = ({
     setResetVersion(version => version + 1);
   }
   const [iotAltitude, setIotAltitude] = useState(0);
-  const latestInput = useRef({ value: inputTelemetry, receivedAt: performance.now() });
+  const latestInput = useRef({ value: inputTelemetry, receivedAt: lastReceivedAt });
   useEffect(() => {
-    latestInput.current = { value: inputTelemetry, receivedAt: performance.now() };
-  }, [inputTelemetry]);
+    latestInput.current = { value: inputTelemetry, receivedAt: lastReceivedAt };
+  }, [inputTelemetry, lastReceivedAt]);
   useEffect(() => {
     if (controlMode !== 'iot') return;
     setIotAltitude(Math.max(0, Number(latestInput.current.value.altitude) || 0));
@@ -99,14 +101,14 @@ const FlightSimulator = ({
       const delta = (now - previous) / 1000;
       previous = now;
       const input = latestInput.current;
-      const stale = now - input.receivedAt > 10000;
+      const stale = input.receivedAt == null || Date.now() - input.receivedAt >= 10000;
       setIotStale(stale);
       if (stale) return;
       setIotAltitude(current => advanceAltitude(current, Number(input.value.speed), Number(input.value.pitch), delta));
     }, 100);
     return () => window.clearInterval(timer);
   }, [controlMode]);
-  const telemetry = controlMode === 'iot' ? { ...inputTelemetry, altitude: iotAltitude, heading: ((Number(inputTelemetry.heading) - headingOrigin) % 360 + 360) % 360, ...(iotStale ? { speed: 0, throttle: 0 } : {}) } : inputTelemetry;
+  const telemetry = controlMode === 'iot' ? { ...inputTelemetry, altitude: iotAltitude, heading: ((Number(inputTelemetry.heading) - headingOrigin) % 360 + 360) % 360, ...((iotStale || lastReceivedAt == null) ? { speed: 0, throttle: 0 } : {}) } : inputTelemetry;
   const [cameraMode, setCameraMode] = useState("chase");
   const [quality, setQuality] = useState("medium");
   const sound = useFlightAudio(telemetry);
@@ -249,6 +251,7 @@ const FlightSimulator = ({
           <button type="button" className="level-button" onClick={restartAircraft} title="Return the simulator aircraft to the runway without signing out. In IoT mode, lower throttle and center the joystick first.">Restart aircraft</button>
           <button type="button" className="level-button" disabled={controlMode !== "keyboard"} onClick={() => setTelemetry(current => ({ ...current, pitch: 0, roll: 0 }))}><Icon name="level" />Level aircraft<kbd>R</kbd></button>
         </div>
+        {controlMode === 'iot' && <div className="notice-card"><TelemetryStatus lastReceivedAt={lastReceivedAt}/><p>{lastReceivedAt == null || iotStale ? 'Waiting for fresh controller packets. Movement is paused.' : Number(inputTelemetry.speed) <= 120 ? 'Taxi mode: increase throttle above 40% for takeoff (speed above 120 km/h).' : Number(inputTelemetry.pitch) < 1 ? 'Takeoff speed reached. Tilt nose up or use joystick up; pitch must be positive.' : 'Climbing input received. Keep bank near level for a straight climb.'}</p></div>}
         {sound.error && <p className="error-message" role="alert">{sound.error}</p>}
 
         <div className="canvas-wrapper">

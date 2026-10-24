@@ -16,3 +16,5 @@ backend/target/
 /frontend/test-results/
 /frontend/playwright-report/
 /backend/*.log
+
+/backups/

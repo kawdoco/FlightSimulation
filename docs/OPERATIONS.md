@@ -104,3 +104,33 @@ Forward travel now converts km/h to meters/second consistently with the scene sc
 Simulator heading holds while parked and ignores rates at/below two degrees/second when moving; large changes are capped and reconnect gaps rebase. Plane firmware additionally applies a 1.5-degree/second gyro deadband and caps integration time. Slow intentional yaw may also be suppressed. Plane pitch/roll combines mounted MPU6050 axes and joystick commands, including corrected simulator bank direction. Flash the updated plane firmware to the plane board only; controller firmware is unchanged. Compilation/tests are not a substitute for checking actual sensor orientation and servo power/wiring. No plane-board upload is claimed in this correction pass.
 
 Heading control update: the simulator now uses coordinated bank turns above 120 km/h rather than integrating MPU6050 yaw into its flight direction. Level bank flies straight; small roll inputs under two degrees are ignored, turn rate is capped at 20 degrees/second, and parked/taxiing bank does not spin the aircraft. Raw gyro heading remains visible in telemetry. This supersedes the earlier simulator gyro-heading filter description. Throttle produces forward motion; pitch produces climb/descent, and roll produces turns at flying speed. This is simplified simulator control and requires checking physical axis directions after flashing the plane firmware.
+
+## Supabase PostgreSQL
+
+Run .\backend\run-supabase.ps1 from the repository root (add -Hardware -Port COM3 -FlightId 1 for ESP32). It asks for the Session pooler JDBC URL on port 5432 with sslmode=require or verify-full, database username and a hidden database-password prompt. DB_URL/DB_USERNAME may be supplied through environment variables; no project credentials are embedded in the script. Stop the existing backend first. No Supabase API/service-role key is required or sent to React.
+
+The supabase profile imports production configuration, runs Flyway and validates Hibernate mappings in a dedicated flightsimulation schema. Existing public tables are neither adopted nor copied. Do not expose the flightsimulation schema through the Supabase Data API for this backend-only design. Application login/roles remain Spring-managed; Supabase Auth is not introduced. The normal local/H2 startup remains available until live cutover is verified.
+
+Existing H2 records are not automatically transferred. Back up the stopped H2 database before planning migration. The new schema can bootstrap a new admin but does not inherit old users, flights or telemetry. Choose fresh setup versus a separately reviewed data migration before cutover. Supabase connection and live PostgreSQL verification remain blocked until connection settings are provided. H2 profile integration testing does not prove cloud connectivity.
+
+Connection reference: https://supabase.com/docs/guides/getting-started/quickstarts/spring-boot
+
+### Preserve H2 records during Supabase cutover
+
+The operator migration tool is scripts/migrate-to-supabase.ps1. Stop the backend first. It makes a hash-verified offline H2 backup under ignored backups/, reads source tables, and obtains the database password using a hidden prompt. Without -Apply it only checks connectivity/source counts and makes no destination changes. With -Apply, Flyway creates/validates the isolated flightsimulation schema, then all application tables are imported in one data transaction. Existing target rows cause refusal; nothing is overwritten. Original IDs, user password hashes, relationships and audit timestamps are retained; PostgreSQL identity sequences are advanced. Do not run the Supabase web application before importing: a bootstrapped admin would make the destination nonempty.
+
+From the repository root:
+
+```powershell
+.\scripts\migrate-to-supabase.ps1
+.\scripts\migrate-to-supabase.ps1 -Apply
+.\backend\run-supabase.ps1 -Hardware -Port COM3 -FlightId 1
+```
+
+Use the existing admin login after import. Source H2 data remains available for rollback; never run both applications writing independently after cutover. Source counts before migration preparation were aircraft=1, flights=1, telemetry=87559, alerts=0, iot_devices=0, maintenance_records=0, application_users=1, audit_records=2. A verified offline backup was created; the user subsequently supplied successful cloud import/commit output (see Release acceptance). Migration unit testing covers copying and refusal of nonempty targets on H2; actual PostgreSQL import/identity reset must be checked after execution. Keep the backup protected because it contains password hashes and application data.
+
+## Live hardware versus cloud recording
+
+Live serial packets now publish to WebSocket before persistence. Supabase recording runs on a separate single worker with one pending sample. Under database backpressure, an older pending sample is replaced by the latest sample; historical hardware recording is therefore sampled and is NOT a lossless packet archive. Live control latency no longer waits for database round trips. REST telemetry writes retain save-before-broadcast semantics. Storage failures do not halt the live stream. Restart the backend to activate this change; do not rerun the H2 migration. Durable high-rate capture would require a separate bounded disk-backed ingestion design.
+
+IoT mode now uses App's actual packet-received timestamp for stale detection, rather than treating every component rerender as a new hardware sample. The simulator itself displays freshness and taxi/takeoff/pitch guidance. Refreshing/navigation cannot make an old packet fresh. Backend changes require restarting the Supabase launcher; frontend edits alone cannot update a running JVM. Existing user/password credentials are not read from another running process by tooling.

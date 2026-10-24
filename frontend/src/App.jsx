@@ -43,6 +43,7 @@ function Dashboard({
   controlMode,
   setControlMode,
   simulatorPage = false,
+  lastReceivedAt,
 }) {
   return (
     <>
@@ -62,7 +63,7 @@ function Dashboard({
         telemetry={telemetry}
         setTelemetry={setTelemetry}
         controlMode={controlMode}
-        setControlMode={setControlMode}
+        setControlMode={setControlMode} lastReceivedAt={lastReceivedAt}
       /></Suspense>
     </>
   );
@@ -129,13 +130,13 @@ function App() {
                   telemetry={simulatorTelemetry}
                   setTelemetry={setKeyboardTelemetry}
                   controlMode={controlMode}
-                  setControlMode={setControlMode}
+                  setControlMode={setControlMode} lastReceivedAt={lastReceivedAt}
                 />
               }
             />
 
             <Route path="/aircraft" element={<AircraftPage />} />
-            <Route path="/simulator" element={<Dashboard simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} />} />
+            <Route path="/simulator" element={<Dashboard simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} lastReceivedAt={lastReceivedAt} />} />
             <Route path="/flights" element={<FlightPage />} />
 
             <Route
