@@ -1,3 +1,9 @@
+import RoleLanding from './pages/RoleLanding';
+import AccessRoute from './access/AccessRoute';
+import {useAccess} from './access/RoleContext';
+import UserManagement from './UserManagement';
+import OperationsPanel from './OperationsPanel';
+import WorkspaceLinks from './components/WorkspaceLinks';
 import { advanceBankHeading } from './simulator/bankDynamics';
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -70,6 +76,7 @@ function Dashboard({
 }
 
 function App() {
+  const {user,role}=useAccess();
   const [keyboardTelemetry, setKeyboardTelemetry] =
     useState(initialTelemetry);
   const [liveTelemetry, setLiveTelemetry] =
@@ -122,21 +129,19 @@ function App() {
 
         <main id="main-content" className="main-content" tabIndex={-1}>
           <WorkspaceBreadcrumb />
-          <Routes>
+          <WorkspaceLinks/>
+          {!role ? <p role="alert">No authorized workspace role. Contact your administrator.</p> : <Routes>
+            <Route path="/users" element={<AccessRoute path="/users"><div className="role-tools"><UserManagement username={user?.username}/></div></AccessRoute>}/>
+            <Route path="/operations" element={<AccessRoute path="/operations"><OperationsPanel/></AccessRoute>}/>
             <Route
               path="/"
               element={
-                <Dashboard
-                  telemetry={simulatorTelemetry}
-                  setTelemetry={setKeyboardTelemetry}
-                  controlMode={controlMode}
-                  setControlMode={setControlMode} lastReceivedAt={lastReceivedAt}
-                />
+                <RoleLanding lastReceivedAt={lastReceivedAt} />
               }
             />
 
             <Route path="/aircraft" element={<AircraftPage />} />
-            <Route path="/simulator" element={<Dashboard simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} lastReceivedAt={lastReceivedAt} />} />
+            <Route path="/simulator" element={<AccessRoute path="/simulator"><Dashboard simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} lastReceivedAt={lastReceivedAt} /></AccessRoute>} />
             <Route path="/flights" element={<FlightPage />} />
 
             <Route
@@ -172,7 +177,7 @@ function App() {
     />
   }
 />
-          </Routes>
+          </Routes>}
         </main>
       </div>
     </BrowserRouter>

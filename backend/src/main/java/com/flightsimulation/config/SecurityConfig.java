@@ -18,6 +18,7 @@ public class SecurityConfig {
    .csrf(csrf->csrf.disable())
    .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
    .authorizeHttpRequests(a->a.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC).permitAll().requestMatchers("/ws","/ws/**").permitAll()
+    .requestMatchers(HttpMethod.GET,"/internal/available").permitAll()
     .requestMatchers(HttpMethod.OPTIONS,"/**").permitAll()
     .requestMatchers("/api/operations/**").hasRole("ADMIN").requestMatchers("/api/users/**").hasRole("ADMIN").requestMatchers("/api/auth/**").authenticated().requestMatchers(HttpMethod.GET,"/api/**").hasAnyRole("VIEWER","OPERATOR","ADMIN")
     .requestMatchers(HttpMethod.DELETE,"/api/**").hasRole("ADMIN")

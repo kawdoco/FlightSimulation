@@ -1,21 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import Icon from './Icon';
 
-const links = [
-  ['/', 'Dashboard', 'dashboard'],
-  ['/aircraft', 'Aircraft', 'aircraft'],
-  ['/flights', 'Flights', 'flights'],
-  ['/simulator', 'Simulator', 'simulator'],
-  ['/telemetry', 'Telemetry', 'telemetry'],
-  ['/history', 'Flight Reports', 'report'],
-  ['/maintenance', 'Maintenance', 'maintenance'],
-  ['/iot-devices', 'IoT Devices', 'chip'],
-];
+import {useAccess} from '../access/RoleContext';
+import {navigation} from '../access/rolePolicy';
 
 export default function Sidebar() {
+  const {role,label}=useAccess();
+  const links=navigation(role);
   const { pathname } = useLocation();
   return <aside className="sidebar">
-    <div className="logo"><h2><Icon name="aircraft" size={50} />AeroSim</h2><span>Flight Simulation</span></div>
+    <div className="logo"><h2><Icon name="aircraft" size={50} />AeroSim</h2><span>{label} workspace</span></div>
     <nav aria-label="Main navigation">
       {links.map(([to, label, icon]) => {
         const reportActive = to === '/history' && pathname.startsWith('/reports/');

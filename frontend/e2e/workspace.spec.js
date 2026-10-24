@@ -49,3 +49,12 @@ test('maintenance creates and completes a work order',async({page})=>{
 });
 
 
+
+test('user administration has readable roles and responsive account panels',async({page})=>{
+ await page.route('**/api/auth/me',r=>r.fulfill({json:{username:'admin',roles:['ROLE_ADMIN']}}));
+ await page.route('**/api/users*',r=>r.fulfill({json:{content:[{username:'admin',role:'ADMIN',enabled:true},{username:'pilot',role:'OPERATOR',enabled:false}],last:true}}));
+ await page.goto('/users');await page.getByLabel('Password',{exact:true}).fill('TestOnlyPassword2026!');await page.getByRole('button',{name:'Sign in to workspace'}).click();
+ await expect(page.getByRole('heading',{name:'User administration'})).toBeVisible();await expect(page.getByLabel('Role for pilot')).toHaveValue('OPERATOR');await expect(page.getByText('Disabled',{exact:true})).toBeVisible();
+ await page.screenshot({path:'test-results/users-desktop.png',fullPage:true});
+ await page.setViewportSize({width:375,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await expect(page.getByRole('button',{name:'Create user',exact:true})).toBeVisible();await page.screenshot({path:'test-results/users-mobile.png',fullPage:true});
+});
