@@ -238,7 +238,7 @@ function AircraftPage() {
   };
 
   return (
-    <div className="aircraft-page">
+    <div className={`aircraft-page${canOperate ? '' : ' read-only'}`}>
       <div className="page-header">
         <div>
           <h1>Aircraft Management</h1>

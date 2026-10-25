@@ -114,7 +114,7 @@ kbd { border-radius: 3px; font-size: 11px; min-width: 27px; height: 28px; backgr
 .back-link { color: #b8dfef; }
 @media (min-width: 1200px) {
   .aircraft-page, .flight-page { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 0 20px; }
-  .flight-page.read-only { grid-template-columns: minmax(0, 1fr); }
+  .aircraft-page.read-only, .flight-page.read-only { grid-template-columns: minmax(0, 1fr); }
   .aircraft-page > .page-header, .flight-page > .page-header, .aircraft-page > .success-message, .aircraft-page > .error-message, .flight-page > .success-message, .flight-page > .error-message { grid-column: 1 / -1; }
   .aircraft-page > .management-card, .flight-page > .management-card { align-self: start; }
   .aircraft-page .aircraft-form, .flight-page .aircraft-form { grid-template-columns: 1fr; gap: 13px; }
