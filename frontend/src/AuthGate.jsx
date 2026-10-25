@@ -35,10 +35,10 @@ export default function AuthGate({children}) {
  }
  function signOut(){setAuthorization('');setUser(null);setOperations(false);setManaging(false);setChanging(false);setError('');setCurrentPassword('');setNewPassword('');}
  if(!user)return <main className="auth-screen"><section className="auth-card">
- <span className="auth-eyebrow">AEROSIM � FLIGHT OPERATIONS</span><h1>Welcome back</h1><p>Sign in to your flight operations workspace.</p><form onSubmit={login}>
+ <span className="auth-eyebrow">AEROSIM &middot; FLIGHT OPERATIONS</span><h1>Welcome back</h1><p>Sign in to your flight operations workspace.</p><form onSubmit={login}>
  <label>Username <input required autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></label>
  <label>Password <input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>
- {error&&<p role="alert" className="auth-error">{error}</p>}<button className="auth-primary" disabled={busy}>{busy?'Signing in�':'Sign in to workspace'}</button></form>
+ {error&&<p role="alert" className="auth-error">{error}</p>}<button className="auth-primary" disabled={busy}>{busy?'Signing in...':'Sign in to workspace'}</button></form>
  <p className="auth-footnote">Authorized personnel access</p></section></main>;
  return <RoleContext.Provider value={user}><div className="authenticated-workspace">
  <header className="auth-toolbar"><span className="auth-workspace-label">AeroSim <small>Operations workspace</small></span><nav aria-label="Account actions">
