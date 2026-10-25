@@ -1,6 +1,6 @@
 param(
  [Parameter(Mandatory=$true)][ValidateSet('A','B','Gateway')][string]$Component,
- [ValidatePattern('^COM[0-9]+$')][string]$SerialPort='COM3',
+ [ValidatePattern('^(AUTO|COM[0-9]+)$')][string]$SerialPort='AUTO',
  [ValidateRange(1,2147483647)][long]$FlightId=1,
  [ValidateRange(1024,65535)][int]$GatewayPort=8090,
  [string]$Caddy='caddy'

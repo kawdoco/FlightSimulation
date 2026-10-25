@@ -9,7 +9,7 @@ export default function FlightHUD({ telemetry, controlMode, cameraMode = 'chase'
   return <div className="flight-hud">
     <div className="instrument-bar" aria-label="Flight instruments">
       {[
-        ['Altitude', `${format(telemetry.altitude)} ft`],
+        ['Simulated altitude', `${format(telemetry.altitude)} ft`],
         ['Airspeed', `${format(telemetry.speed)} km/h`],
         ['Heading', `${format(telemetry.heading).padStart(3, '0')}°`],
         ['Throttle', `${format(telemetry.throttle)}%`],

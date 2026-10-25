@@ -316,7 +316,7 @@ const FlightPage = () => {
   );
 
   return (
-    <div className="flight-page">
+    <div className={`flight-page${canOperate ? '' : ' read-only'}`}>
 
       <div className="page-header">
         <div>

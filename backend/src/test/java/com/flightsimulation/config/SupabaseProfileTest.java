@@ -11,5 +11,5 @@ import static org.junit.jupiter.api.Assertions.*;
 class SupabaseProfileTest {
  @Autowired Flyway flyway;
  @Autowired UserRepository users;
- @Test void migratesIsolatedSchemaAndValidatesJpa(){assertEquals("1",flyway.info().current().getVersion().toString());assertTrue(users.existsById("admin"));flyway.validate();}
+ @Test void migratesIsolatedSchemaAndValidatesJpa(){assertEquals("2",flyway.info().current().getVersion().toString());assertTrue(users.existsById("admin"));flyway.validate();}
 }

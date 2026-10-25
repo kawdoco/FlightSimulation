@@ -17,8 +17,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not defined SERIAL_ENABLED set "SERIAL_ENABLED=false"
-if not defined FLIGHTSIMULATION_SERIAL_PORT set "FLIGHTSIMULATION_SERIAL_PORT=COM3"
+if not defined SERIAL_ENABLED set "SERIAL_ENABLED=true"
+if not defined FLIGHTSIMULATION_SERIAL_PORT set "FLIGHTSIMULATION_SERIAL_PORT=AUTO"
 if not "%~1"=="" set "FLIGHTSIMULATION_SERIAL_PORT=%~1"
 
 echo Close Arduino Serial Monitor and Serial Plotter before starting.

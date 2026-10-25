@@ -34,6 +34,9 @@ http://localhost:{$LB_GATEWAY_PORT:8090} {
 		handle /ws* {
 			import owner
 		}
+		handle /api/hardware* {
+			import owner
+		}
 		handle /api/* {
 			reverse_proxy {$LB_BACKEND_A:127.0.0.1:8081} {$LB_BACKEND_B:127.0.0.1:8082} {
 				lb_policy round_robin

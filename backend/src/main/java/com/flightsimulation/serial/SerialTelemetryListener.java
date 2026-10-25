@@ -41,7 +41,7 @@ public class SerialTelemetryListener {
     private final TelemetryIngestionService telemetryIngestionService;
     private final String portName;
     private final int baudRate;
-    private final long flightId;
+    private final com.flightsimulation.service.HardwareSession session;
 
     private volatile boolean running;
     private volatile SerialPort serialPort;
@@ -53,14 +53,14 @@ public class SerialTelemetryListener {
             TelemetryIngestionService telemetryIngestionService,
             @Value("${flightsimulation.serial.port}") String portName,
             @Value("${flightsimulation.serial.baud-rate}") int baudRate,
-            @Value("${flightsimulation.serial.flight-id}") long flightId
+            com.flightsimulation.service.HardwareSession session
     ) {
         this.objectMapper = objectMapper;
         this.validator = validator;
         this.telemetryIngestionService = telemetryIngestionService;
         this.portName = portName;
         this.baudRate = baudRate;
-        this.flightId = flightId;
+        this.session = session;
     }
 
     @PostConstruct
@@ -74,24 +74,54 @@ public class SerialTelemetryListener {
     private void connectionLoop() {
         while(running && !Thread.currentThread().isInterrupted()) {
             try {
-                serialPort = SerialPort.getCommPort(portName);
+                serialPort = resolvePort();
                 serialPort.setBaudRate(baudRate);
                 serialPort.setNumDataBits(8);
                 serialPort.setNumStopBits(SerialPort.ONE_STOP_BIT);
                 serialPort.setParity(SerialPort.NO_PARITY);
+                serialPort.clearDTR();
+                serialPort.clearRTS();
                 serialPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
-                if(!serialPort.openPort()) throw new IOException("Serial port unavailable");
+                if(!serialPort.isOpen() && !serialPort.openPort()) throw new IOException("Serial port unavailable");
                 if(!running) break;
-                logger.info("ESP32 connected on {} at {} baud",portName,baudRate);
+                session.connected(serialPort.getSystemPortName());
+                logger.info("ESP32 connected on {} at {} baud",serialPort.getSystemPortName(),baudRate);
                 readTelemetry();
             } catch(IOException | RuntimeException ex) {
                 if(running) logger.warn("ESP32 connection unavailable on {}; retrying in 3 seconds",portName);
             } finally {
+                session.disconnected();
                 if(serialPort!=null && serialPort.isOpen()) serialPort.closePort();
             }
             if(running) try { Thread.sleep(3000); }
             catch(InterruptedException ex){Thread.currentThread().interrupt();break;}
         }
+    }
+    private SerialPort resolvePort() throws IOException {
+        if (!"AUTO".equalsIgnoreCase(portName)) return SerialPort.getCommPort(portName);
+        for (SerialPort candidate : SerialPort.getCommPorts()) {
+            if (!running) break;
+            candidate.setBaudRate(baudRate);
+            candidate.clearDTR();
+            candidate.clearRTS();
+            candidate.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 300, 0);
+            if (!candidate.openPort()) continue;
+            boolean recognized = false;
+            try {
+                var frames = new SerialLineReader(new BufferedReader(new InputStreamReader(candidate.getInputStream(), StandardCharsets.UTF_8)), 4096);
+                long deadline = System.nanoTime() + 5_000_000_000L;
+                while (running && System.nanoTime() < deadline) {
+                    try {
+                        String line = frames.readLine();
+                        if (line == null) break;
+                        if (!line.stripLeading().startsWith("{")) continue;
+                        var packet = objectMapper.readValue(line, SerialTelemetryPacket.class);
+                        if (validator.validate(packet).isEmpty()) { recognized = true; return candidate; }
+                    } catch (RuntimeException | IOException ignored) { /* Try another frame until deadline. */ }
+                }
+            } finally { if (!recognized) candidate.closePort(); }
+        }
+        throw new IOException("No controller JSON telemetry found; connect USB and close Serial Monitor");
     }
     private void readTelemetry() {
         try (BufferedReader reader = new BufferedReader(
@@ -145,7 +175,11 @@ public class SerialTelemetryListener {
         telemetry.setHeading(packet.heading());
         telemetry.setThrottle(packet.throttle());
         telemetry.setFuel(packet.fuel());
-        telemetryIngestionService.ingestLiveTelemetry(flightId, telemetry);
+        telemetry.setAltitudeValid(packet.altitudeValid());
+        telemetry.setImuValid(packet.imuValid());
+        telemetry.setCommandFresh(packet.commandFresh());
+        session.received();
+        telemetryIngestionService.ingestLiveTelemetry(session.flightId(), telemetry);
     }
 
     @PreDestroy

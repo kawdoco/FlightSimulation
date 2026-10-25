@@ -11,6 +11,19 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "telemetry", indexes = @Index(name = "idx_telemetry_flight_recorded", columnList = "flight_id,recorded_at"))
 public class Telemetry {
+    @Column(name = "ingest_key", unique = true, length = 36)
+    private String ingestKey;
+    @Column(name = "altitude_valid") private Boolean altitudeValid;
+    @Column(name = "imu_valid") private Boolean imuValid;
+    @Column(name = "command_fresh") private Boolean commandFresh;
+    public String getIngestKey() { return ingestKey; }
+    public void setIngestKey(String value) { ingestKey = value; }
+    public Boolean getAltitudeValid() { return altitudeValid; }
+    public void setAltitudeValid(Boolean value) { altitudeValid = value; }
+    public Boolean getImuValid() { return imuValid; }
+    public void setImuValid(Boolean value) { imuValid = value; }
+    public Boolean getCommandFresh() { return commandFresh; }
+    public void setCommandFresh(Boolean value) { commandFresh = value; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

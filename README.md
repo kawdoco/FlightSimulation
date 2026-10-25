@@ -11,7 +11,9 @@ $env:APP_ADMIN_PASSWORD='<choose-a-unique-password>'
 .\start.bat
 ```
 
-The initial admin password requires at least 12 Unicode characters and at most 72 UTF-8 bytes. Sign in as `admin`. Existing accounts retain their saved passwords; use Change password in the UI afterward. Serial hardware is optional and disabled by default.
+The initial admin password requires at least 12 Unicode characters and at most 72 UTF-8 bytes. Sign in as `admin`. Existing accounts retain their saved passwords; use Change password in the UI afterward. The local launcher enables automatic ESP32 controller discovery. Set `SERIAL_ENABLED=false` for keyboard-only use. Direct backend launches leave serial disabled unless explicitly enabled.
+
+For hardware-only backend startup, run `.\scripts\start-hardware.ps1` with Serial Monitor closed. AUTO recognizes controller JSON rather than assuming a COM number. Select **Hardware flight** in the workspace to use the same flight for monitoring and recording. Upload both sketches for sensor-health indicators and MPU recovery.
 
 Frontend: http://localhost:5173. Backend: http://localhost:8081. Stop an existing server before starting another on the same port.
 

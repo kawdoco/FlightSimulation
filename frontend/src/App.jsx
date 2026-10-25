@@ -27,11 +27,8 @@ import Icon from "./components/Icon";
 import "./App.css";
 import "./professional.css";
 import WorkspaceBreadcrumb from "./components/WorkspaceBreadcrumb";
-
-const configuredFlightId = Number(import.meta.env.VITE_TELEMETRY_FLIGHT_ID ?? 1);
-const telemetryFlightId = Number.isSafeInteger(configuredFlightId) && configuredFlightId > 0
-  ? configuredFlightId
-  : 1;
+import HardwareConnection from './components/HardwareConnection';
+import SensorHealth from './components/SensorHealth';
 
 const initialTelemetry = {
   altitude: 0,
@@ -76,6 +73,7 @@ function Dashboard({
 }
 
 function App() {
+  const [telemetryFlightId, setTelemetryFlightId] = useState(null);
   const {user,role}=useAccess();
   const [keyboardTelemetry, setKeyboardTelemetry] =
     useState(initialTelemetry);
@@ -91,7 +89,14 @@ function App() {
   const [simulatorHeading, setSimulatorHeading] = useState(0);
 
   useEffect(() => {
+    if (telemetryFlightId == null) return;
     let disposed = false;
+    setLiveTelemetry(initialTelemetry);
+    setLastReceivedAt(null);
+    setHasReceivedTelemetry(false);
+    lastHeadingTime.current = null;
+    headingState.current = 0;
+    setSimulatorHeading(0);
 
     connectTelemetryWebSocket((incomingTelemetry) => {
       if (disposed) return;
@@ -105,6 +110,9 @@ function App() {
       setLiveTelemetry((current) => ({
         ...current,
         ...incomingTelemetry,
+        altitudeValid: incomingTelemetry.altitudeValid ?? null,
+        imuValid: incomingTelemetry.imuValid ?? null,
+        commandFresh: incomingTelemetry.commandFresh ?? null,
       }));
       setHasReceivedTelemetry(true);
       setLastReceivedAt(Date.now());
@@ -114,7 +122,7 @@ function App() {
       disposed = true;
       disconnectTelemetryWebSocket();
     };
-  }, []);
+  }, [telemetryFlightId]);
 
   const simulatorTelemetry =
     controlMode === "iot"
@@ -130,6 +138,8 @@ function App() {
         <main id="main-content" className="main-content" tabIndex={-1}>
           <WorkspaceBreadcrumb />
           <WorkspaceLinks/>
+          <HardwareConnection onFlightChange={setTelemetryFlightId} />
+          <SensorHealth telemetry={liveTelemetry} received={hasReceivedTelemetry} />
           {!role ? <p role="alert">No authorized workspace role. Contact your administrator.</p> : <Routes>
             <Route path="/users" element={<AccessRoute path="/users"><div className="role-tools"><UserManagement username={user?.username}/></div></AccessRoute>}/>
             <Route path="/operations" element={<AccessRoute path="/operations"><OperationsPanel/></AccessRoute>}/>
@@ -141,7 +151,7 @@ function App() {
             />
 
             <Route path="/aircraft" element={<AircraftPage />} />
-            <Route path="/simulator" element={<AccessRoute path="/simulator"><Dashboard simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} lastReceivedAt={lastReceivedAt} /></AccessRoute>} />
+            <Route path="/simulator" element={<AccessRoute path="/simulator"><Dashboard key={telemetryFlightId} simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} lastReceivedAt={lastReceivedAt} /></AccessRoute>} />
             <Route path="/flights" element={<FlightPage />} />
 
             <Route

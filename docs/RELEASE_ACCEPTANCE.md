@@ -54,3 +54,13 @@ After live broadcasting was decoupled from cloud recording and simulator freshne
 Do not declare production-ready until the relevant gates have recorded evidence for the actual release commit. A deployment, restore drill or browser/hardware result must not be inferred from passing unit tests.
 
 Use [Operations](OPERATIONS.md) for commands, limits and troubleshooting, [Architecture](ARCHITECTURE.md) for implementation structure and [Requirements](requirements/README.md) for intended feature scope. [Archived notes](archive/README.md) preserve development history and earlier, potentially outdated claims.
+
+## Hardware fixes verification (2026-10-25)
+
+This update supersedes the earlier latest-sample recording and fixed frontend flight-ID descriptions. Normal local startup enables AUTO controller detection; `/api/hardware` supplies the shared runtime flight selection and recording backlog. Sensor health is nullable for old firmware and preserved in new history/CSV rows. V2 adds ingestion keys and health columns. Disk spooling retains accepted samples during database delays, with explicit errors for capacity/disk failures; it is not a guarantee against upstream packet loss.
+
+- Backend verification: 98 tests passed, including retry/restart retention, idempotent replay, role enforcement and V2 schema validation on H2 PostgreSQL mode. No new live PostgreSQL migration was performed.
+- Frontend: 28 unit tests passed. Production chunks are all below 500 KB; simulator chunk approximately 289 KB with separately cached Three.js chunks. Production-preview browser suite: 14 passed using installed Chrome, including actual simulator canvas initialization and mocked hardware flight/status workflows.
+- Both sketches compiled and uploaded with flash hash verification. USB identities were checked from serial output before upload: controller COM6, plane COM7 at that time (port numbers may change).
+- AUTO discovery connected the updated backend to COM6. A live queued sample reported `altitudeValid=false`, `imuValid=true`, `commandFresh=true`, and flight ID 1. Database inserts with ingestion key/health columns were observed.
+- Ultrasonic no-echo and Wi-Fi credentials were intentionally unchanged. Physical unplug/reconnect, MPU failure/recovery under motion and complete live browser acceptance remain manual checks; unit and browser mocks do not prove them.
