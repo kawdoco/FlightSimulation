@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 
-const names = { '/': 'Dashboard', '/simulator': 'Simulator', '/aircraft': 'Aircraft', '/flights': 'Flights', '/telemetry': 'Telemetry', '/history': 'Reports', '/maintenance': 'Maintenance', '/iot-devices': 'IoT Devices' };
+const names = { '/': 'Overview', '/users': 'User management', '/operations': 'Audit & operations', '/simulator': 'Simulator', '/aircraft': 'Aircraft', '/flights': 'Flights', '/telemetry': 'Telemetry', '/history': 'Reports', '/maintenance': 'Maintenance', '/iot-devices': 'IoT Devices' };
 
 export default function WorkspaceBreadcrumb() {
   const { pathname } = useLocation();

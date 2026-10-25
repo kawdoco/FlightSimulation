@@ -1,3 +1,4 @@
+import {useAccess} from '../access/RoleContext';
 import { useEffect, useState } from "react";
 
 import {
@@ -23,6 +24,7 @@ const emptyForm = {
 };
 
 const FlightPage = () => {
+  const {canOperate,canDelete}=useAccess();
   const [flights, setFlights] = useState([]);
   const [aircraft, setAircraft] = useState([]);
 
@@ -314,7 +316,7 @@ const FlightPage = () => {
   );
 
   return (
-    <div className="flight-page">
+    <div className={`flight-page${canOperate ? '' : ' read-only'}`}>
 
       <div className="page-header">
         <div>
@@ -343,7 +345,7 @@ const FlightPage = () => {
         </div>
       )}
 
-      <section className="management-card">
+      {canOperate && (      <section className="management-card">
 
         <div className="management-card-header">
           <h2>
@@ -482,7 +484,7 @@ const FlightPage = () => {
           </div>
 
         </form>
-      </section>
+      </section>)}
 
       <section className="management-card">
 
@@ -556,7 +558,7 @@ const FlightPage = () => {
 
                     <td>
 
-                      <div className="table-actions">
+                      {canOperate ? <div className="table-actions">
 
                         {flight.status ===
                           "SCHEDULED" && (
@@ -626,7 +628,7 @@ const FlightPage = () => {
 
                         )}
 
-                        {flight.status !==
+                        {canDelete && flight.status !==
                           "IN_PROGRESS" && (
 
                           <button
@@ -642,7 +644,7 @@ const FlightPage = () => {
 
                         )}
 
-                      </div>
+                      </div> : <span>Read only</span>}
 
                     </td>
 

@@ -16,3 +16,13 @@ backend/target/
 /frontend/test-results/
 /frontend/playwright-report/
 /backend/*.log
+
+/backups/
+
+# Hardware development
+/frontend/playwright.local.config.mjs
+/tmp/*compile.log
+/tmp/hardware*.log
+/tmp/plane-firmware/
+/tmp/controller-firmware/
+/sketch_aug24a/**/build/

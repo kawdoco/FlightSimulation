@@ -1,3 +1,4 @@
+import {useAccess} from '../access/RoleContext';
 import { useEffect, useState } from "react";
 
 import {
@@ -75,6 +76,7 @@ function getErrorMessage(error, fallback) {
 }
 
 function AircraftPage() {
+  const {canOperate,canDelete}=useAccess();
   const [aircraft, setAircraft] = useState([]);
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState(null);
@@ -262,7 +264,7 @@ function AircraftPage() {
         </div>
       )}
 
-      <section className="management-card">
+      {canOperate && (      <section className="management-card">
         <div className="management-card-header">
           <h2>
             {editingId !== null
@@ -339,7 +341,7 @@ function AircraftPage() {
             )}
           </div>
         </form>
-      </section>
+      </section>)}
 
       <section className="management-card">
         <div className="management-card-header">
@@ -386,7 +388,7 @@ function AircraftPage() {
 
 
                     <td>
-                      <div className="table-actions">
+                      {canOperate ? <div className="table-actions">
                         <button
                           type="button"
                           className="edit-btn"
@@ -396,15 +398,15 @@ function AircraftPage() {
                           Edit
                         </button>
 
-                        <button
+                        {canDelete && (<button
                           type="button"
                           className="delete-btn"
                           onClick={() => handleDelete(item.id)}
                           disabled={busy}
                         >
                           Delete
-                        </button>
-                      </div>
+                        </button>)}
+                      </div> : <span>Read only</span>}
                     </td>
                   </tr>
                 ))}

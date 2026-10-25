@@ -4,7 +4,7 @@ import MetricCard from '../components/MetricCard';
 export default function TelemetryPage({ telemetry, hasReceivedTelemetry, lastReceivedAt }) {
   const format = (value, decimals = 0) => (Number(value) || 0).toFixed(decimals);
   const items = [
-    ['Altitude', `${format(telemetry.altitude)} ft`, 'altitude'],
+    ['Sensor altitude', telemetry.altitudeValid === false ? 'Unavailable' : `${format(telemetry.altitude)} ft`, 'altitude'],
     ['Speed', `${format(telemetry.speed)} km/h`, 'speed'],
     ['Heading', `${format(telemetry.heading)}°`, 'heading'],
     ['Fuel', `${format(telemetry.fuel, 1)}%`, 'fuel'],

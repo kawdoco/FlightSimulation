@@ -1,3 +1,5 @@
+import { RoleContext } from './access/RoleContext';
+import { resolveRole, roleLabels } from './access/rolePolicy';
 import OperationsPanel from './OperationsPanel';
 import { setAuthorization, onSessionExpired } from './services/authSession';
 import './auth.css';
@@ -33,17 +35,17 @@ export default function AuthGate({children}) {
  }
  function signOut(){setAuthorization('');setUser(null);setOperations(false);setManaging(false);setChanging(false);setError('');setCurrentPassword('');setNewPassword('');}
  if(!user)return <main className="auth-screen"><section className="auth-card">
- <span className="auth-eyebrow">AEROSIM · FLIGHT OPERATIONS</span><h1>Welcome back</h1><p>Sign in to your flight operations workspace.</p><form onSubmit={login}>
+ <span className="auth-eyebrow">AEROSIM ï¿½ FLIGHT OPERATIONS</span><h1>Welcome back</h1><p>Sign in to your flight operations workspace.</p><form onSubmit={login}>
  <label>Username <input required autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></label>
  <label>Password <input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>
- {error&&<p role="alert" className="auth-error">{error}</p>}<button className="auth-primary" disabled={busy}>{busy?'Signing in…':'Sign in to workspace'}</button></form>
+ {error&&<p role="alert" className="auth-error">{error}</p>}<button className="auth-primary" disabled={busy}>{busy?'Signing inï¿½':'Sign in to workspace'}</button></form>
  <p className="auth-footnote">Authorized personnel access</p></section></main>;
- return <div className="authenticated-workspace">
+ return <RoleContext.Provider value={user}><div className="authenticated-workspace">
  <header className="auth-toolbar"><span className="auth-workspace-label">AeroSim <small>Operations workspace</small></span><nav aria-label="Account actions">
  {user.roles.includes('ROLE_ADMIN')&&<button aria-expanded={managing} onClick={()=>{setManaging(v=>!v);setChanging(false);setOperations(false);}}>Manage users</button>}
  {user.roles.includes('ROLE_ADMIN')&&<button aria-expanded={operations} onClick={()=>{setOperations(v=>!v);setManaging(false);setChanging(false);}}>Operations</button>}
  <button aria-expanded={changing} onClick={()=>{setChanging(v=>!v);setManaging(false);setOperations(false);setError('');}}>Change password</button>
- <span className="auth-identity">{user.username}<small>{user.roles.filter(r=>['ROLE_ADMIN','ROLE_OPERATOR','ROLE_VIEWER'].includes(r)).map(r=>r.replace('ROLE_','')).join(', ')}</small></span>
+ <span className="auth-identity">{user.username}<small>{roleLabels[resolveRole(user.roles)] ?? 'No workspace role'}</small></span>
  <button onClick={signOut}>Sign out</button></nav></header>
  {(managing||changing||operations)&&<aside className="account-panel" aria-label="Account settings">
  <button className="account-close" onClick={()=>{setManaging(false);setChanging(false);setOperations(false);setCurrentPassword('');setNewPassword('');}}>Close settings</button>
@@ -53,10 +55,5 @@ export default function AuthGate({children}) {
  <label>Current password <input required type="password" autoComplete="current-password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)}/></label>
  <label>New password <input required minLength={12} maxLength={128} type="password" autoComplete="new-password" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></label>
  {error&&<p role="alert" className="auth-error">{error}</p>}<button className="auth-primary" disabled={busy}>Save password and sign out</button></form>}
- </aside>}{children}</div>;
+ </aside>}{children}</div></RoleContext.Provider>;
 }
-
-
-
-
-

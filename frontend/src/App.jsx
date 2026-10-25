@@ -1,3 +1,10 @@
+import RoleLanding from './pages/RoleLanding';
+import AccessRoute from './access/AccessRoute';
+import {useAccess} from './access/RoleContext';
+import UserManagement from './UserManagement';
+import OperationsPanel from './OperationsPanel';
+import WorkspaceLinks from './components/WorkspaceLinks';
+import { advanceBankHeading } from './simulator/bankDynamics';
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -20,11 +27,8 @@ import Icon from "./components/Icon";
 import "./App.css";
 import "./professional.css";
 import WorkspaceBreadcrumb from "./components/WorkspaceBreadcrumb";
-
-const configuredFlightId = Number(import.meta.env.VITE_TELEMETRY_FLIGHT_ID ?? 1);
-const telemetryFlightId = Number.isSafeInteger(configuredFlightId) && configuredFlightId > 0
-  ? configuredFlightId
-  : 1;
+import HardwareConnection from './components/HardwareConnection';
+import SensorHealth from './components/SensorHealth';
 
 const initialTelemetry = {
   altitude: 0,
@@ -42,6 +46,7 @@ function Dashboard({
   controlMode,
   setControlMode,
   simulatorPage = false,
+  lastReceivedAt,
 }) {
   return (
     <>
@@ -57,17 +62,19 @@ function Dashboard({
         </div>
       </div>
 
-      <Suspense fallback={<p role="status">Loading flight simulator…</p>}> <FlightSimulator
+      <Suspense fallback={<p role="status">Loading flight simulatorï¿½</p>}> <FlightSimulator
         telemetry={telemetry}
         setTelemetry={setTelemetry}
         controlMode={controlMode}
-        setControlMode={setControlMode}
+        setControlMode={setControlMode} lastReceivedAt={lastReceivedAt}
       /></Suspense>
     </>
   );
 }
 
 function App() {
+  const [telemetryFlightId, setTelemetryFlightId] = useState(null);
+  const {user,role}=useAccess();
   const [keyboardTelemetry, setKeyboardTelemetry] =
     useState(initialTelemetry);
   const [liveTelemetry, setLiveTelemetry] =
@@ -77,26 +84,35 @@ function App() {
     useState(false);
   const [controlMode, setControlMode] = useState("iot");
 
-  const initialHeading = useRef(null);
+  const lastHeadingTime = useRef(null);
+  const headingState = useRef(0);
+  const [simulatorHeading, setSimulatorHeading] = useState(0);
 
   useEffect(() => {
+    if (telemetryFlightId == null) return;
     let disposed = false;
+    setLiveTelemetry(initialTelemetry);
+    setLastReceivedAt(null);
+    setHasReceivedTelemetry(false);
+    lastHeadingTime.current = null;
+    headingState.current = 0;
+    setSimulatorHeading(0);
 
     connectTelemetryWebSocket((incomingTelemetry) => {
       if (disposed) return;
 
-      const heading = Number(incomingTelemetry.heading);
-
-      if (
-        initialHeading.current === null &&
-        Number.isFinite(heading)
-      ) {
-        initialHeading.current = heading;
-      }
-
+      const headingTime = performance.now();
+      const headingDelta = lastHeadingTime.current === null ? 0.1 : (headingTime - lastHeadingTime.current) / 1000;
+      lastHeadingTime.current = headingTime;
+      headingState.current = advanceBankHeading(headingState.current,
+        Number(incomingTelemetry.speed), Number(incomingTelemetry.roll), headingDelta);
+      setSimulatorHeading(headingState.current);
       setLiveTelemetry((current) => ({
         ...current,
         ...incomingTelemetry,
+        altitudeValid: incomingTelemetry.altitudeValid ?? null,
+        imuValid: incomingTelemetry.imuValid ?? null,
+        commandFresh: incomingTelemetry.commandFresh ?? null,
       }));
       setHasReceivedTelemetry(true);
       setLastReceivedAt(Date.now());
@@ -106,19 +122,11 @@ function App() {
       disposed = true;
       disconnectTelemetryWebSocket();
     };
-  }, []);
-
-  const incomingHeading = Number(liveTelemetry.heading);
-  const relativeHeading = Number.isFinite(incomingHeading)
-    ? (
-        (incomingHeading - (initialHeading.current ?? 0)) % 360 +
-        360
-      ) % 360
-    : 0;
+  }, [telemetryFlightId]);
 
   const simulatorTelemetry =
     controlMode === "iot"
-      ? { ...liveTelemetry, heading: relativeHeading }
+      ? { ...liveTelemetry, heading: simulatorHeading }
       : keyboardTelemetry;
 
   return (
@@ -129,21 +137,21 @@ function App() {
 
         <main id="main-content" className="main-content" tabIndex={-1}>
           <WorkspaceBreadcrumb />
-          <Routes>
+          <WorkspaceLinks/>
+          <HardwareConnection onFlightChange={setTelemetryFlightId} />
+          <SensorHealth telemetry={liveTelemetry} received={hasReceivedTelemetry} />
+          {!role ? <p role="alert">No authorized workspace role. Contact your administrator.</p> : <Routes>
+            <Route path="/users" element={<AccessRoute path="/users"><div className="role-tools"><UserManagement username={user?.username}/></div></AccessRoute>}/>
+            <Route path="/operations" element={<AccessRoute path="/operations"><OperationsPanel/></AccessRoute>}/>
             <Route
               path="/"
               element={
-                <Dashboard
-                  telemetry={simulatorTelemetry}
-                  setTelemetry={setKeyboardTelemetry}
-                  controlMode={controlMode}
-                  setControlMode={setControlMode}
-                />
+                <RoleLanding lastReceivedAt={lastReceivedAt} />
               }
             />
 
             <Route path="/aircraft" element={<AircraftPage />} />
-            <Route path="/simulator" element={<Dashboard simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} />} />
+            <Route path="/simulator" element={<AccessRoute path="/simulator"><Dashboard key={telemetryFlightId} simulatorPage telemetry={simulatorTelemetry} setTelemetry={setKeyboardTelemetry} controlMode={controlMode} setControlMode={setControlMode} lastReceivedAt={lastReceivedAt} /></AccessRoute>} />
             <Route path="/flights" element={<FlightPage />} />
 
             <Route
@@ -179,7 +187,7 @@ function App() {
     />
   }
 />
-          </Routes>
+          </Routes>}
         </main>
       </div>
     </BrowserRouter>
@@ -187,5 +195,3 @@ function App() {
 }
 
 export default App;
-
-

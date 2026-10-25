@@ -1,3 +1,4 @@
+import TelemetryStatus from '../components/TelemetryStatus';
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,7 +15,7 @@ import TelemetryPanel from "../components/TelemetryPanel";
 import FlightHUD from "../components/FlightHUD";
 import Icon from "../components/Icon";
 
-const FlightScene = ({ telemetry, cameraMode, quality }) => {
+const FlightScene = ({ telemetry, cameraMode, quality, resetVersion }) => {
   const aircraftRef = useRef();
   const sunlightRef = useRef();
   const settings = QUALITY_PRESETS[quality];
@@ -58,7 +59,7 @@ const FlightScene = ({ telemetry, cameraMode, quality }) => {
       <FlightEnvironment quality={quality} />
       <Runway />
 
-      <Aircraft
+      <Aircraft key={resetVersion}
         ref={aircraftRef}
         telemetry={telemetry}
       />
@@ -69,11 +70,45 @@ const FlightScene = ({ telemetry, cameraMode, quality }) => {
 };
 
 const FlightSimulator = ({
-  telemetry,
+  telemetry: inputTelemetry,
   setTelemetry,
   controlMode,
   setControlMode,
+  lastReceivedAt,
 }) => {
+  const [iotStale, setIotStale] = useState(false);
+  const [headingOrigin, setHeadingOrigin] = useState(0);
+  const [resetVersion, setResetVersion] = useState(0);
+  function restartAircraft() {
+    setIotAltitude(0);
+    setHeadingOrigin(Number(inputTelemetry.heading) || 0);
+    if (controlMode === 'keyboard') {
+      setTelemetry(current => ({ ...current, altitude: 0, speed: 0, pitch: 0, roll: 0, heading: 0, throttle: 0 }));
+    }
+    setResetVersion(version => version + 1);
+  }
+  const [iotAltitude, setIotAltitude] = useState(0);
+  const latestInput = useRef({ value: inputTelemetry, receivedAt: lastReceivedAt });
+  useEffect(() => {
+    latestInput.current = { value: inputTelemetry, receivedAt: lastReceivedAt };
+  }, [inputTelemetry, lastReceivedAt]);
+  useEffect(() => {
+    if (controlMode !== 'iot') return;
+    setIotAltitude(Math.max(0, Number(latestInput.current.value.altitude) || 0));
+    let previous = performance.now();
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      const delta = (now - previous) / 1000;
+      previous = now;
+      const input = latestInput.current;
+      const stale = input.receivedAt == null || Date.now() - input.receivedAt >= 10000;
+      setIotStale(stale);
+      if (stale) return;
+      setIotAltitude(current => advanceAltitude(current, Number(input.value.speed), Number(input.value.pitch), delta));
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [controlMode]);
+  const telemetry = controlMode === 'iot' ? { ...inputTelemetry, altitude: iotAltitude, heading: ((Number(inputTelemetry.heading) - headingOrigin) % 360 + 360) % 360, ...((iotStale || lastReceivedAt == null) ? { speed: 0, throttle: 0 } : {}) } : inputTelemetry;
   const [cameraMode, setCameraMode] = useState("chase");
   const [quality, setQuality] = useState("medium");
   const sound = useFlightAudio(telemetry);
@@ -213,8 +248,10 @@ const FlightSimulator = ({
             <button type="button" className="level-button sound-toggle" aria-pressed={sound.enabled} disabled={sound.busy} onClick={sound.toggle} title="Engine sound follows throttle; wind follows airspeed."><Icon name="sound" size={17} />{sound.busy ? 'Starting…' : sound.enabled ? 'Sound on' : 'Sound off'}</button>
             {sound.enabled && <label className="sound-volume">Volume<input aria-label="Engine sound volume" type="range" min="0" max="100" value={Math.round(sound.volume * 100)} onChange={event => sound.setVolume(Number(event.target.value) / 100)} /></label>}
           </div>
+          <button type="button" className="level-button" onClick={restartAircraft} title="Return the simulator aircraft to the runway without signing out. In IoT mode, lower throttle and center the joystick first.">Restart aircraft</button>
           <button type="button" className="level-button" disabled={controlMode !== "keyboard"} onClick={() => setTelemetry(current => ({ ...current, pitch: 0, roll: 0 }))}><Icon name="level" />Level aircraft<kbd>R</kbd></button>
         </div>
+        {controlMode === 'iot' && <div className="notice-card"><TelemetryStatus lastReceivedAt={lastReceivedAt}/><p>{lastReceivedAt == null || iotStale ? 'Waiting for fresh controller packets. Movement is paused.' : Number(inputTelemetry.speed) <= 120 ? 'Taxi mode: increase throttle above 40% for takeoff (speed above 120 km/h).' : Number(inputTelemetry.pitch) < 1 ? 'Takeoff speed reached. Tilt nose up or use joystick up; pitch must be positive.' : 'Climbing input received. Keep bank near level for a straight climb.'}</p></div>}
         {sound.error && <p className="error-message" role="alert">{sound.error}</p>}
 
         <div className="canvas-wrapper">
@@ -230,7 +267,7 @@ const FlightSimulator = ({
               far: 4000,
             }}
           >
-            <FlightScene telemetry={telemetry} cameraMode={cameraMode} quality={quality} />
+            <FlightScene telemetry={telemetry} cameraMode={cameraMode} quality={quality} resetVersion={resetVersion} />
           </Canvas>
 
           <FlightHUD telemetry={telemetry} controlMode={controlMode} cameraMode={cameraMode} />
@@ -239,7 +276,7 @@ const FlightSimulator = ({
 
       {controlMode === "keyboard" ? <div className="controls-strip" aria-label="Keyboard controls">
         {[["W", "S", "Pitch"], ["A", "D", "Roll"], ["Q", "E", "Heading"], ["↑", "↓", "Throttle"], ["R", null, "Level aircraft"]].map(([first, second, label]) => <div className="control-hint" key={label}><kbd>{first}</kbd>{second && <kbd>{second}</kbd>}<span>{label}</span></div>)}
-      </div> : <div className="controls-strip iot-hint"><Icon name="info" />Tilt the MPU6050 to change pitch and roll. Rotate it to change heading. Throttle controls forward speed. Keep the sensor level when powering on to calibrate.</div>}
+      </div> : <div className="controls-strip iot-hint"><Icon name="info" />Use throttle to build speed above 120 km/h, then pull the joystick up to climb. Push down to descend. Simulated altitude follows speed and pitch; raw sensor altitude remains on the telemetry page.</div>}
       <TelemetryPanel telemetry={telemetry} />
     </>
   );

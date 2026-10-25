@@ -1,36 +1,66 @@
-# Release acceptance status
+# Release acceptance
 
-This file replaces no prior findings: it records what the seven release workstreams actually achieved.
+Status reviewed: 2026-10-25. The application has substantial implementation and automated coverage; production acceptance remains incomplete.
 
-1. Migrations: Flyway V1 added for all current entities. Production uses migrations + Hibernate validate, automatic baseline and clean disabled. H2 PostgreSQL-mode migration/schema/repeat-run test passed. Existing local data is left on Hibernate update with Flyway disabled. Existing PostgreSQL schemas MUST be compared and backed up before a deliberate baseline; never enable baseline-on-migrate blindly.
-2. Security: per-source-IP failure throttle added (10 failed authenticated API calls/minute, then 429); bounded to 10,000 tracked sources. No forwarded headers trusted. Single-instance only; behind a proxy clients may share an IP, so production edge throttling is still required. HTTPS gateway configuration supplied. No certificate/domain provisioning performed.
-3. PostgreSQL: CI job added using an isolated PostgreSQL service for migration and concurrent-flight tests. Docker and psql were unavailable locally. PostgreSQL verification is pending a successful CI run.
-4. Browser: Playwright tests authored for mocked admin sign-in/operations/sign-out and viewer control visibility. These are UI tests with mocked REST, not live full-stack acceptance. Browser installation/execution belongs in CI; tests have not yet run locally.
-5. Hardware: manual acceptance steps below; physical hardware is not accessible through current tools. No physical verification claimed.
-6. Performance/recovery: deterministic async capacity and batch-export tests already pass; deployment backup helper added. Throughput benchmarks and a real restore drill remain pending.
-7. Deployment: container, PostgreSQL Compose and optional Caddy HTTPS gateway supplied. No staging host, domain or deployment credentials are connected. No release is published.
+## Evidence
 
-## Hardware acceptance
-Enable SERIAL_ENABLED and select the real COM port. Create/select the configured flight. Verify joystick axes, throttle and altitude units; disconnect USB, observe stale telemetry after 10 seconds, reconnect and verify recovery. Test missing/invalid sensors, oversized/invalid packets and backend shutdown. Capture pass/fail evidence for each device/firmware revision. This is simulator validation, not aircraft flight certification.
+| Check | Recorded result | Limit |
+| --- | --- | --- |
+| Local backend verify/package | 91 tests passed in the latest verification run | Re-run before release |
+| Local frontend unit tests/build | 21 tests/build passed | Large simulator chunk warning remains |
+| npm audit | Zero reported vulnerabilities after Vite update | Point-in-time result |
+| Flyway migration | H2 PostgreSQL-mode schema validation and repeat-run passed | Not PostgreSQL evidence by itself |
+| GitHub backend/PostgreSQL jobs | User-provided screenshot showed both passing | No direct CI log/commit inspection performed here |
+| GitHub browser job | Earlier screenshot showed maintenance failure; all four now pass locally | Remote rerun result not supplied |
+| Browser test suite | Four mocked workflow specs passed locally using installed Chrome | Not live full-stack acceptance |
+| Backup/restore scripts | PowerShell syntax checked | No real restore performed |
 
-## Staging procedure
-Run backend verify and frontend tests/build. Build frontend with VITE_BACKEND_URL set to the HTTPS public origin, and FRONTEND_URL set to the same origin. Set unique DB_PASSWORD and initial APP_ADMIN_PASSWORD in the invoking environment. Set PUBLIC_DOMAIN to a domain pointing at the staging host. Build the backend JAR before Docker image build.
+## Release gates
 
-From deploy: docker compose -f compose.yaml -f https.compose.yaml up --build -d. This is an operator command, not executed by the agent. Ports 80/443 must be available for Caddy certificate provisioning. Review the source-IP throttle/proxy limitation before public exposure. The database is not host-published; backend binding is loopback only. Do not reuse CI credentials.
+1. **Database migrations:** V1 is implemented. Review any existing production schema and document a safe baseline/upgrade path. Keep migration validation required in CI.
+2. **Security:** authentication, roles, password policy, failure throttling and HTTPS configuration exist. Verify real certificates, proxy-aware edge controls and deployment configuration. Cross-instance socket revocation/tenant isolation are not implemented.
+3. **PostgreSQL:** retain the passing CI evidence for the released commit; verify persistence, reports and restarts on the staging database. The screenshot is narrower evidence than full workflow acceptance.
+4. **Browser:** rerun the fixed CI maintenance scenario, then verify live login/roles, aircraft, flights, maintenance, operations and downloads against the backend. Mocked UI tests alone are insufficient.
+5. **Hardware:** controller/plane firmware uploads were flash-verified on COM3/COM7. Wi-Fi discovery, serial telemetry and backend broadcasting were observed; the user confirmed corrected left/right behavior. Complete the remaining live tilt, takeoff, reconnect and sensor-fault checks. Ultrasonic no-echo was observed and remains unresolved.
+6. **Performance/recovery:** batch export and deterministic worker-capacity tests exist. Run staging load checks against agreed targets and complete a real isolated restore drill.
+7. **Deployment:** container, PostgreSQL Compose and HTTPS gateway configuration exist. No staging host/domain deployment or production promotion has been verified.
 
-Before every upgrade take a backup with deploy/backup.ps1. Restore only into a separate disposable database first using pg_restore --exit-on-error, compare row counts, verify admin login and telemetry reports, and document results. No automated restore is run against existing user data. Production promotion requires successful PostgreSQL CI, live browser checks, hardware checks, load targets and restore evidence.
+## Hardware acceptance checklist
 
-Restore tooling: deploy/restore-drill.ps1 takes a backup filename, creates a new timestamped database, restores with --exit-on-error and checks core table counts. It never deletes existing databases. The drill database is retained for inspection. Script has not been executed because Docker is unavailable.
+- Record firmware/device revision and configured flight/COM port.
+- Verify joystick axes, throttle, heading and ultrasonic altitude units.
+- Disconnect USB; confirm stale UI after ten seconds and reconnect recovery.
+- Exercise missing/invalid sensor readings, invalid/oversized packets and shutdown.
+- Record pass/fail evidence. These are simulator checks, not flight certification.
 
-Load tooling: scripts/load-smoke.mjs performs 50 authenticated, read-only readiness requests at concurrency five and prints failure count/p50/p95. Supply LOAD_TEST_BASE_URL, LOAD_TEST_USERNAME and LOAD_TEST_PASSWORD via the process environment. It rejects plaintext remote targets. This probe does not model telemetry ingestion, browser rendering or realistic production load, and has not been executed against staging.
+## Demo verification (2026-10-25)
 
-## Final local verification for this increment
-- Backend Maven verify/package: 86 tests passed, zero failures/errors.
-- Frontend Node tests: 8 passed; production build passed (large simulator chunk warning remains).
-- npm audit after compatible Vite patch update: zero reported vulnerabilities.
-- Four Playwright specs parse/list successfully; browser execution is not claimed (no connected browser surface).
-- Backup/restore/local verification PowerShell scripts parse successfully.
-- PostgreSQL service CI and browser CI are configured but have not been run remotely.
-- ESP32 tests explicitly deferred at the user's request because hardware is disconnected.
+- Backend Maven verify/package: 86 tests passed.
+- Frontend Node tests: 21 passed; production build passed; npm audit reported zero vulnerabilities.
+- Both ESP32 sketches compile for esp32:esp32:esp32. The plane/controller identities were separately verified during earlier uploads; no new upload was required for this test pass.
+- Playwright browser tests: 4 passed in 4.5 seconds using installed Chrome through a temporary local configuration. The missing bundled runtime/download prevented the default launch; CI still installs its pinned Chromium runtime. No permanent executable path was added. These tests mock REST and are not live full-stack IoT tests.
+- Automated checks cover demo dynamics and bank turns, not a calibrated aerodynamic model. Raw telemetry/history retain sensor values; simulator altitude is local virtual state.
 
-The seven workstreams have code/configuration/procedures prepared, but production acceptance is NOT complete. Required external inputs are a disposable PostgreSQL runtime, a connected/test browser runtime and staging domain/host access. Deployment, real restore, benchmark and live end-to-end evidence cannot be manufactured from passing unit tests.
+Follow [Demo walkthrough](DEMO_GUIDE.md) for a repeatable presentation. Live full-stack browser acceptance, PostgreSQL staging evidence, restore/load checks and complete physical sensor acceptance remain pending.
+
+## Supabase cutover and live confirmation
+
+On 2026-10-25 the user supplied successful migration output from Supabase PostgreSQL 17.6: Flyway V1 applied in flightsimulation, and the data transaction committed after row-count verification. Aircraft=1, flights=1, telemetry=87559, application_users=1, audit_records=2; other application tables were empty. IDs and existing password hashes were preserved. The stopped H2 source received a hash-verified backup before import. Backups are excluded from Git.
+
+After live broadcasting was decoupled from cloud recording and simulator freshness used packet timestamps, the user reported all controls/telemetry/simulator behavior working. This is user-reported live acceptance, not an automated hardware certification. Cloud recording uses latest-sample backpressure and is not lossless. Ultrasonic echo, full reconnect/fault testing, independent cloud count inspection, restore drills and production acceptance remain outstanding.
+
+## Release decision
+
+Do not declare production-ready until the relevant gates have recorded evidence for the actual release commit. A deployment, restore drill or browser/hardware result must not be inferred from passing unit tests.
+
+Use [Operations](OPERATIONS.md) for commands, limits and troubleshooting, [Architecture](ARCHITECTURE.md) for implementation structure and [Requirements](requirements/README.md) for intended feature scope. [Archived notes](archive/README.md) preserve development history and earlier, potentially outdated claims.
+
+## Hardware fixes verification (2026-10-25)
+
+This update supersedes the earlier latest-sample recording and fixed frontend flight-ID descriptions. Normal local startup enables AUTO controller detection; `/api/hardware` supplies the shared runtime flight selection and recording backlog. Sensor health is nullable for old firmware and preserved in new history/CSV rows. V2 adds ingestion keys and health columns. Disk spooling retains accepted samples during database delays, with explicit errors for capacity/disk failures; it is not a guarantee against upstream packet loss.
+
+- Backend verification: 98 tests passed, including retry/restart retention, idempotent replay, role enforcement and V2 schema validation on H2 PostgreSQL mode. No new live PostgreSQL migration was performed.
+- Frontend: 28 unit tests passed. Production chunks are all below 500 KB; simulator chunk approximately 289 KB with separately cached Three.js chunks. Production-preview browser suite: 14 passed using installed Chrome, including actual simulator canvas initialization and mocked hardware flight/status workflows.
+- Both sketches compiled and uploaded with flash hash verification. USB identities were checked from serial output before upload: controller COM6, plane COM7 at that time (port numbers may change).
+- AUTO discovery connected the updated backend to COM6. A live queued sample reported `altitudeValid=false`, `imuValid=true`, `commandFresh=true`, and flight ID 1. Database inserts with ingestion key/health columns were observed.
+- Ultrasonic no-echo and Wi-Fi credentials were intentionally unchanged. Physical unplug/reconnect, MPU failure/recovery under motion and complete live browser acceptance remain manual checks; unit and browser mocks do not prove them.

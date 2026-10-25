@@ -45,6 +45,26 @@ float altitudeCm = 0.0f;
 float groundDistanceCm = 0.0f;
 float distanceCm = 0.0f;
 bool groundCalibrated = false;
+bool imuReady = false;
+uint8_t activeMpuAddress = 0x68;
+uint32_t lastMpuAttemptAt = 0;
+
+bool initializeMpu() {
+  lastMpuAttemptAt = millis();
+  activeMpuAddress = 0x68;
+  bool detected = mpu.begin(activeMpuAddress, &Wire);
+  if (!detected) { activeMpuAddress = 0x69; detected = mpu.begin(activeMpuAddress, &Wire); }
+  if (!detected) {
+    Serial.println("ERROR: MPU6050 unavailable; joystick controls remain active; retrying in 5 seconds.");
+    return false;
+  }
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  // Recovery does not recalibrate a moving aircraft. Startup calibration runs once below.
+  Serial.println("MPU6050 connected.");
+  return true;
+}
 uint32_t lastCommandAt = 0;
 uint32_t lastSensorReadAt = 0;
 uint32_t lastTelemetrySentAt = 0;
@@ -78,10 +98,19 @@ void keepWiFiConnected() {
 }
 
 void readAttitude(float& pitch, float& roll, float& gyroZ) {
+  if (imuReady) {
+    Wire.beginTransmission(activeMpuAddress);
+    if (Wire.endTransmission() != 0) imuReady = false;
+  }
+  if (!imuReady) { pitch = pitchOffset; roll = rollOffset; gyroZ = gyroZOffset; return; }
   sensors_event_t acceleration;
   sensors_event_t gyroscope;
   sensors_event_t temperature;
-  mpu.getEvent(&acceleration, &gyroscope, &temperature);
+  if (!mpu.getEvent(&acceleration, &gyroscope, &temperature)) {
+    imuReady = false;
+    pitch = pitchOffset; roll = rollOffset; gyroZ = gyroZOffset;
+    return;
+  }
 
   pitch = atan2(
       acceleration.acceleration.y,
@@ -186,7 +215,7 @@ void receiveControllerCommands() {
               &throttle,
               &resetHeading
           ) == 5
-          && type == 'C') {
+          && type == 'C' && isfinite(stickX) && isfinite(stickY)) {
         controlPacketsReceived++;
         controllerAddress = udp.remoteIP();
         controllerDiscovered = true;
@@ -224,6 +253,7 @@ void updateSensors(uint32_t now) {
   float rawRoll;
   float gyroZ;
   readAttitude(rawPitch, rawRoll, gyroZ);
+  if (!imuReady) { filteredPitch = 0.0f; filteredRoll = 0.0f; }
 
   pitchDegrees = constrain(rawPitch - pitchOffset, -45.0f, 45.0f);
   rollDegrees = constrain(rawRoll - rollOffset, -45.0f, 45.0f);
@@ -232,9 +262,11 @@ void updateSensors(uint32_t now) {
   if (fabs(filteredPitch) < 0.5f) filteredPitch = 0.0f;
   if (fabs(filteredRoll) < 0.5f) filteredRoll = 0.0f;
 
-  const float elapsedSeconds = (now - lastSensorReadAt) / 1000.0f;
+  const float elapsedSeconds = min(0.25f, (now - lastSensorReadAt) / 1000.0f);
+  float yawRate = (gyroZ - gyroZOffset) * 180.0f / PI;
+  if (!isfinite(yawRate) || fabs(yawRate) < 1.5f) yawRate = 0.0f;
   headingDegrees = wrapHeading(
-      headingDegrees + (gyroZ - gyroZOffset) * 180.0f / PI * elapsedSeconds
+      headingDegrees + yawRate * elapsedSeconds
   );
   lastSensorReadAt = now;
   distanceCm = readDistanceCm();
@@ -269,18 +301,25 @@ void sendTelemetry() {
   }
 
   const float speed = throttlePercent * 3.0f;
-  // Swap sensor axes and invert pitch so physical nose-down is simulator nose-down.
+  // Combine physical aircraft tilt with joystick attitude commands.
+  // Sensor axes follow the mounted orientation: nose pitch uses -filteredRoll.
+  // Bank direction follows the updated physical left/right mounting.
+  const float simulatorPitch = constrain(-filteredRoll + controlPitch * 25.0f, -45.0f, 45.0f);
+  const float simulatorRoll = constrain(filteredPitch + controlRoll * 40.0f, -45.0f, 45.0f);
   char packet[128];
   snprintf(
       packet,
       sizeof(packet),
-      "T,%.2f,%.2f,%.2f,%.2f,%.2f,%d,100",
+      "T,%.2f,%.2f,%.2f,%.2f,%.2f,%d,100,%d,%d,%d",
       altitudeCm,
       speed,
-      -filteredRoll,
-      filteredPitch,
+      simulatorPitch,
+      simulatorRoll,
       headingDegrees,
-      throttlePercent
+      throttlePercent,
+      groundCalibrated && distanceCm >= 2.0f && distanceCm <= 400.0f ? 1 : 0,
+      imuReady ? 1 : 0,
+      controllerDiscovered && millis() - lastCommandAt <= CONTROL_TIMEOUT_MS ? 1 : 0
   );
 
   udp.beginPacket(controllerAddress, UDP_PORT);
@@ -308,26 +347,9 @@ void setup() {
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
 
-  // AD0 LOW selects 0x68; AD0 HIGH selects 0x69.
-  uint8_t mpuAddress = 0x68;
-  bool mpuDetected = mpu.begin(mpuAddress, &Wire);
-  if (!mpuDetected) {
-    mpuAddress = 0x69;
-    mpuDetected = mpu.begin(mpuAddress, &Wire);
-  }
-  if (!mpuDetected) {
-    Serial.println("ERROR: MPU6050 not detected at 0x68 or 0x69; check SDA/SCL and power.");
-    while (true) {
-      Serial.println("ERROR: MPU6050 not detected; plane startup stopped. Check SDA=21, SCL=22, power and GND, then reset.");
-      delay(2000);
-    }
-  }
-  Serial.printf("MPU6050 detected at I2C address 0x%02X.\n", mpuAddress);
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-  calibrateMpu();
-  Serial.println("MPU6050 initialized and calibrated.");
+  Wire.setTimeOut(50);
+  imuReady = initializeMpu();
+  if (imuReady) calibrateMpu();
   calibrateGround();
 
   connectToWiFi();
@@ -341,6 +363,7 @@ void setup() {
 void loop() {
   keepWiFiConnected();
   receiveControllerCommands();
+  if (!imuReady && millis() - lastMpuAttemptAt >= 5000) imuReady = initializeMpu();
   updateControlSurfaces();
 
   const uint32_t now = millis();
@@ -352,13 +375,21 @@ void loop() {
     printSensorData();
     lastTelemetrySentAt = now;
   }
-  if (now - lastNetworkStatusAt >= 2000) {
+  if (now - lastNetworkStatusAt >= 2000)
+ {
     Serial.printf(
         "UDP status: plane IP=%s, controller=%s, commands received=%lu, telemetry sent=%lu\n",
         WiFi.localIP().toString().c_str(),
         controllerDiscovered ? controllerAddress.toString().c_str() : "not discovered",
         static_cast<unsigned long>(controlPacketsReceived),
         static_cast<unsigned long>(telemetryPacketsSent)
+    );
+    Serial.printf(
+        "Servo controls: roll=%.3f pitch=%.3f | target roll=%d pitch=%d | command age=%lu ms\n",
+        controlRoll, controlPitch,
+        constrain(SERVO_CENTER + static_cast<int>(controlRoll * SERVO_TRAVEL_DEGREES), 45, 135),
+        constrain(SERVO_CENTER + static_cast<int>(controlPitch * SERVO_TRAVEL_DEGREES), 45, 135),
+        static_cast<unsigned long>(millis() - lastCommandAt)
     );
     lastNetworkStatusAt = now;
   }

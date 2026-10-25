@@ -3,7 +3,7 @@ import MetricCard from './MetricCard';
 export default function TelemetryPanel({ telemetry }) {
   const format = (value, decimals = 0) => (Number(value) || 0).toFixed(decimals);
   const items = [
-    ['Altitude', `${format(telemetry.altitude)} ft`, 'altitude'],
+    ['Simulated altitude', `${format(telemetry.altitude)} ft`, 'altitude'],
     ['Speed', `${format(telemetry.speed)} km/h`, 'speed'],
     ['Pitch', `${format(telemetry.pitch, 1)}°`, 'pitch'],
     ['Roll', `${format(telemetry.roll, 1)}°`, 'roll'],

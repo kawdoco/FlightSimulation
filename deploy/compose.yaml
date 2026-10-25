@@ -23,6 +23,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set initial admin password}
       FRONTEND_URL: ${FRONTEND_URL:?Set HTTPS frontend origin}
+    volumes:
+      - hardware_recording:/app/data
     ports:
       - '127.0.0.1:8081:8081'
     depends_on:
@@ -30,3 +32,4 @@ services:
         condition: service_healthy
 volumes:
   flight_database:
+  hardware_recording:

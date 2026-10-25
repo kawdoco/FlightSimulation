@@ -13,13 +13,15 @@ public class TelemetryIngestionService {
     private static final Logger logger = LoggerFactory.getLogger(TelemetryIngestionService.class);
     private boolean missingFlightReported;
 
+    private final HardwareTelemetryRecorder recorder;
     private final TelemetryService telemetryService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public TelemetryIngestionService(
             TelemetryService telemetryService,
-            SimpMessagingTemplate messagingTemplate
+            SimpMessagingTemplate messagingTemplate, HardwareTelemetryRecorder recorder
     ) {
+        this.recorder = recorder;
         this.telemetryService = telemetryService;
         this.messagingTemplate = messagingTemplate;
     }
@@ -30,17 +32,10 @@ public class TelemetryIngestionService {
         return saved;
     }
 
-    // Hardware preview remains available before a flight has been created.
     public void ingestLiveTelemetry(Long flightId, Telemetry telemetry) {
-        try {
-            saveAndBroadcast(flightId, telemetry);
-            missingFlightReported = false;
-        } catch (ResourceNotFoundException exception) {
-            if (!missingFlightReported) {
-                logger.warn("Flight {} does not exist: ESP32 telemetry is live only. Create the flight to record telemetry.", flightId);
-                missingFlightReported = true;
-            }
-            messagingTemplate.convertAndSend("/topic/telemetry/" + flightId, telemetry);
-        }
+        telemetry.setRecordedAt(java.time.LocalDateTime.now());
+        // Publish before handing a separate copy to the cloud recording worker.
+        messagingTemplate.convertAndSend("/topic/telemetry/" + flightId, telemetry);
+        recorder.record(flightId,telemetry);
     }
 }

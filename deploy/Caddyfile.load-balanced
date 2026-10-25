@@ -1,0 +1,64 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+}
+
+(owner) {
+	reverse_proxy {$LB_BACKEND_A:127.0.0.1:8081} {
+		transport http {
+			dial_timeout 2s
+			response_header_timeout 30s
+		}
+	}
+}
+
+http://localhost:{$LB_GATEWAY_PORT:8090} {
+	bind 127.0.0.1
+	encode gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	route {
+		# Do not publish the internal probe through the browser gateway.
+		respond /internal/* 404
+		@ownerWrites {
+			method POST PUT PATCH DELETE
+			path /api/telemetry /api/telemetry/* /api/users /api/users/* /api/auth /api/auth/*
+		}
+		handle @ownerWrites {
+			import owner
+		}
+		handle /ws* {
+			import owner
+		}
+		handle /api/hardware* {
+			import owner
+		}
+		handle /api/* {
+			reverse_proxy {$LB_BACKEND_A:127.0.0.1:8081} {$LB_BACKEND_B:127.0.0.1:8082} {
+				lb_policy round_robin
+				# No retries: a write must never be replayed after an ambiguous failure.
+				health_uri /internal/available
+				health_status 204
+				health_interval 2s
+				health_timeout 2s
+				health_fails 1
+				health_passes 1
+				fail_duration 3s
+				max_fails 1
+				transport http {
+					dial_timeout 2s
+					response_header_timeout 30s
+				}
+			}
+		}
+		handle {
+			root * {$LB_FRONTEND_ROOT:frontend/dist}
+			try_files {path} /index.html
+			file_server
+		}
+	}
+}

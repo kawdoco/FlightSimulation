@@ -30,7 +30,10 @@ public class TelemetryService {
             Long flightId,
             Telemetry telemetry
     ) {
-
+        if (telemetry.getIngestKey() != null) {
+            var existing = telemetryRepository.findByIngestKey(telemetry.getIngestKey());
+            if (existing.isPresent()) return existing.get();
+        }
         Flight flight = flightRepository
                 .findById(flightId)
                 .orElseThrow(() ->
@@ -102,7 +105,7 @@ public class TelemetryService {
             var writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(output, java.nio.charset.StandardCharsets.UTF_8));
             writer.write("Flight ID," + flightId + "\r\nFlight Number," + csvText(flightNumber)
                 + "\r\nStatus," + csvText(status) + "\r\n\r\n");
-            writer.write("recordedAt,altitude,speed,pitch,roll,heading,throttle,fuel\r\n");
+            writer.write("recordedAt,altitude,speed,pitch,roll,heading,throttle,fuel,altitudeValid,imuValid,commandFresh\r\n");
             long cursor = upperId;
             while(cursor > 0) {
                 var batch = telemetryRepository.findByFlightIdAndIdLessThanEqualOrderByIdDesc(
@@ -111,7 +114,8 @@ public class TelemetryService {
                 for(var t : batch) {
                     writer.write(value(t.getRecordedAt()) + "," + value(t.getAltitude()) + "," + value(t.getSpeed())
                         + "," + value(t.getPitch()) + "," + value(t.getRoll()) + "," + value(t.getHeading())
-                        + "," + value(t.getThrottle()) + "," + value(t.getFuel()) + "\r\n");
+                        + "," + value(t.getThrottle()) + "," + value(t.getFuel())
+                        + "," + value(t.getAltitudeValid()) + "," + value(t.getImuValid()) + "," + value(t.getCommandFresh()) + "\r\n");
                 }
                 cursor = batch.getLast().getId() - 1;
                 writer.flush();

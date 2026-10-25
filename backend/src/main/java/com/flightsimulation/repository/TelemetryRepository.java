@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface TelemetryRepository
         extends JpaRepository<Telemetry, Long> {
+    java.util.Optional<Telemetry> findByIngestKey(String ingestKey);
 
     org.springframework.data.domain.Slice<Telemetry> findByFlightId(Long flightId, org.springframework.data.domain.Pageable pageable);
     @org.springframework.data.jpa.repository.Query("select coalesce(max(t.id),0) from Telemetry t where t.flight.id = :flightId")

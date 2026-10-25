@@ -118,18 +118,22 @@ void emitTelemetryJson(const char* packet) {
   float heading;
   float throttle;
   float fuel;
+  int altitudeValid = -1;
+  int imuValid = -1;
+  int commandFresh = -1;
 
-  if (sscanf(
+  const int fields = sscanf(
           packet,
-          "T,%f,%f,%f,%f,%f,%f,%f",
+          "T,%f,%f,%f,%f,%f,%f,%f,%d,%d,%d",
           &altitude,
           &speed,
           &pitch,
           &roll,
           &heading,
           &throttle,
-          &fuel
-      ) != 7) {
+          &fuel, &altitudeValid, &imuValid, &commandFresh
+      );
+  if (fields != 7 && fields != 10) {
 #if SERIAL_DIAGNOSTICS
     Serial.println("ERROR: Telemetry packet format is invalid.");
 #endif
@@ -139,14 +143,18 @@ void emitTelemetryJson(const char* packet) {
   // Keep USB serial output machine-readable for the Spring Boot serial listener.
   Serial.printf(
       "{\"altitude\":%.2f,\"speed\":%.2f,\"pitch\":%.2f,"
-      "\"roll\":%.2f,\"heading\":%.2f,\"throttle\":%.0f,\"fuel\":%.1f}\n",
+      "\"roll\":%.2f,\"heading\":%.2f,\"throttle\":%.0f,\"fuel\":%.1f,"
+      "\"altitudeValid\":%s,\"imuValid\":%s,\"commandFresh\":%s}\n",
       max(0.0f, altitude),
       max(0.0f, speed),
       pitch,
       roll,
       constrain(heading, 0.0f, 360.0f),
       constrain(throttle, 0.0f, 100.0f),
-      constrain(fuel, 0.0f, 100.0f)
+      constrain(fuel, 0.0f, 100.0f),
+      fields == 10 ? (altitudeValid == 1 ? "true" : "false") : "null",
+      fields == 10 ? (imuValid == 1 ? "true" : "false") : "null",
+      fields == 10 ? (commandFresh == 1 ? "true" : "false") : "null"
   );
 }
 
